@@ -10,6 +10,7 @@ fieldnames = ("time","isKnown","access","username","uid","door")
 def on_connect(client, userdata, flags, rc):
     print(f'Connected with result code {rc}')
 
+    global config
     for section in config.sections():
         if section.endswith('door'):
             topic = f"{config[section]['topic']}/send"
@@ -37,6 +38,7 @@ def main():
             log = DictWriter(csvfile,fieldnames=fieldnames,extrasaction='ignore')
             log.writeheader()
 
+    global config
     config = configparser.ConfigParser()
     config.read('config.ini')
 
