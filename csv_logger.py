@@ -8,7 +8,7 @@ from os.path import isfile
 fieldnames = ("time","isKnown","access","username","uid","door")
 
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
+    print(f'Connected with result code {rc}')
 
     for section in config.sections():
         if section.endswith('door'):
@@ -17,12 +17,11 @@ def on_connect(client, userdata, flags, rc):
             client.subscribe(topic)
 
 def on_message(client, userdata, msg):
-    print(msg.topic+" "+str(msg.payload))
     data = json.loads(msg.payload)
     if data['cmd'] == 'log' and data['type'] == 'access':
         data['time'] = datetime.fromtimestamp(data['time'])
-        data['uid'] = int_to_uid(data['uid'])
-        print(f"{data['time']}: {data['username']} ({data['uid']}, {data['access']}) through {data['door']}")
+        data['uid'] = int_to_uid(int(data['uid']))
+        print(f"{data['time']}: {data['username']} ({data['uid']}, {data['access']}) at {data['door']}")
         with open('access.csv','a',newline=' ') as csvfile:
             log = DictWriter(csvfile,fieldnames=fieldnames,extrasaction='ignore')
             log.writerow(data)
@@ -33,18 +32,19 @@ def int_to_uid(uid_int):
     return f'{upper:05d}:{lower:05d}'
 
 def main():
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-
     if not isfile('access.csv'):
         with open('access.csv','a',newline='') as csvfile:
             log = DictWriter(csvfile,fieldnames=fieldnames,extrasaction='ignore')
             log.writeheader()
 
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
 
+    print(f"connecting to {config['mqtt']['server']}:{config.getint('mqtt','port')}")
     client.connect(config['mqtt']['server'],config.getint('mqtt','port'))
 
     client.loop_forever()
