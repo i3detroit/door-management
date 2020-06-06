@@ -35,7 +35,7 @@ def main():
     config.read('config.ini')
 
     if not isfile('access.csv'):
-        with open('access.csv','a',newline=' ') as csvfile:
+        with open('access.csv','a',newline='') as csvfile:
             log = DictWriter(csvfile,fieldnames=fieldnames,extrasaction='ignore')
             log.writeheader()
 
