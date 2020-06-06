@@ -63,7 +63,7 @@ class Door:
 
 @click.group()
 def cli():
-    '''cli entry point'''
+    '''MQTT door management system'''
     click.echo('i3Detroit Door Access System')
     
     global config
