@@ -12,7 +12,7 @@ def on_connect(client, userdata, flags, rc):
 
     for section in config.sections():
         if section.endswith('door'):
-            client.subscribe(config[section]['topic'])
+            client.subscribe(config[section]['topic'] + '/send')
 
 def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
