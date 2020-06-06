@@ -131,6 +131,7 @@ def intake(filename):
                 MAX_DATE)
             json_users['list'].append(u.json_dict())
             click.echo(f'\tintake {u}')
+            sleep(0.5)
     with open('users.json','w',encoding='utf8') as json_file:           
         json.dump(json_users,json_file,indent=2)
 
