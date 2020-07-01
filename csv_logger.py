@@ -23,7 +23,7 @@ def on_message(client, userdata, msg):
         data['time'] = datetime.fromtimestamp(data['time'])
         data['uid'] = int_to_uid(int(data['uid']))
         print(f"{data['time']}: {data['username']} ({data['uid']}, {data['access']}) at {data['door']}")
-        with open('access.csv','a',newline=' ') as csvfile:
+        with open('access.csv','a',newline='') as csvfile:
             log = DictWriter(csvfile,fieldnames=fieldnames,extrasaction='ignore')
             log.writerow(data)
 
