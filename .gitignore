@@ -131,3 +131,4 @@ users.db
 .vscode/settings.json
 config.ini
 users.json
+door.db

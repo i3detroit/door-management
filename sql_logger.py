@@ -1,4 +1,5 @@
 import paho.mqtt.client as mqtt
+import configparser
 import json
 import datetime
 import logging
@@ -55,9 +56,14 @@ def on_message(client, userdata, msg):
         logger.warning('%s: Unknown message: "%s"',msg.topic,msg.payload)
 
 def main():
+    global config
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
-    client.connect('localhost',1883,60)
+    client.username_pw_set(username=config.get('mqtt','username'),password=config.get('mqtt','password'))
+    client.connect(config.get('mqtt','server'),config.getint('mqtt','port'))
     client.loop_forever()
 
