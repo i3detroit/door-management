@@ -26,3 +26,16 @@ setup(
         csv_logger=csv_logger:main
     ''',
 )
+
+setup(
+    name='sql_logger',
+    version='0.1',
+    py_modules=['sql_logger'],
+    install_requires=[
+        'paho-mqtt',
+    ],
+    entry_points='''
+        [console_scripts]
+        sql_logger=sql_logger:main
+    ''',
+)
