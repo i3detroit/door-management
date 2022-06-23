@@ -1,0 +1,15 @@
+{
+    "mqtt": {
+        "server": "host",
+        "port": 1883
+    },
+    "doors": [
+        {
+            "name": "whatever name",
+            "topic": "mqtt topic",
+            "ip": "host",
+            "user": "admin",
+            "pass": "admin pass"
+        }
+    ]
+}

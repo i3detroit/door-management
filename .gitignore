@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 users.db
 .vscode/settings.json
-config.ini
-users.json
-door.db
+config.json
+access.csv
+
+node_modules
