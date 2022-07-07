@@ -5,7 +5,7 @@
     },
     "doors": [
         {
-            "name": "whatever name",
+            "hostname": "whatever name",
             "topic": "mqtt topic",
             "ip": "host",
             "user": "admin",
