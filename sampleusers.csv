@@ -1,4 +1,4 @@
-     cid,                Name,      Serial,  PIN
+     CID,                name,  key serial,  PIN
        1, testy mctestalot  0, 00102:52080, 1234
        1, testy mctestalot  1, 00102:52081, 1234
       99, testy mctestalot  2, 00102:52082, 1234

@@ -5,11 +5,15 @@ const rp = require('request-promise-native');
 const csv=require('csvtojson')
 const fs = require('fs');
 
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const csvHeaders = ["CID", "name", "key", "PIN"];
+
 const args = process.argv.slice(2);
 if(args.length != 1 || args[0] == "-h" || args[0] == "--help") {
     console.log("usage: setAccess.js <access.csv>");
     console.log("   update doors configured in config.json with people in access.csv");
-    console.log("   access.csv header: CID, name, key serial, PIN");
+    console.log("   access.csv header: " + csvHeaders.join(', '));
     process.exit(1);
 }
 let fileToParse = args[0];
@@ -27,17 +31,26 @@ try {
 
 let config = JSON.parse(fs.readFileSync('config.json'));
 
-// parse csv of "CID, name, key serial, PIN"
+
+const hasSubArray = (master, sub) => {
+    return sub.every(el => master.includes(el));
+}
+
+
 const getExpectedUsers = (filename) => {
     return csv()
         .fromFile(filename)
         .then((users) => users.map((user) => {
+            if(!hasSubArray(Object.keys(user), csvHeaders)) {
+                console.error("userfile has bad headers, expecting " + csvHeaders.join(', '));
+                process.exit(5);
+            }
             return {
-                uid: user['key serial'],
+                uid: user.key,
                 acctype: 1,
                 username: `${user.CID}: ${user.name}`,
                 validuntil: 4200000000, //year 2103, probably fine
-                pincode: `${user.PIN}`
+                pincode: user.PIN
             };
         }));
 };
@@ -54,11 +67,17 @@ const login = (host, username, password) => {
         resolveWithFullResponse: true,
     };
 
-    return rp(loginOptions).then( (response) => {
-        if(response.statusCode != 200) {
-            reject("failed to login");
+    return rp(loginOptions).then((response) => {
+        if (response.statusCode != 200) {
+            throw new Error({"msg": "unknown login issue", "err": err});
         }
         return response.request.headers.authorization;
+    }, (badResponse) => {
+        if (badResponse.statusCode == 401) {
+            throw new Error("bad password");
+        } else {
+            throw new Error({"msg": "unknown login issue", "err": err});
+        }
     })
 }
 
@@ -112,40 +131,85 @@ const connect = (auth, ip) => {
     });
 };
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const delUser = (ws, badUID) => {
+    process.stdout.write(".");
+    ws.send(JSON.stringify( {
+        "command": "remove",
+        "uid": badUID
+    }));
+};
+const deleteUsers = (ws, badUsers) => {
+    if(badUsers.length == 0) {
+        return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+        let badUser = badUsers.pop();
 
-const deleteUsers = async (ws, badUsers) => {
-    return badUsers.map((u, i) => {
-        return new Promise(async (resolve, reject) => {
-            await delay(i * 1500);
-            ws.send(JSON.stringify( {
-                "command": "remove",
-                "uid": u.uid
-            }));
-            resolve();
+        ws.on('message', async (message) => {
+            let data = JSON.parse(message)
+            //console.log(data);
+            if(data.command == 'result' && data.resultof == 'remove') {
+                if(data.result != true) {
+                    console.error("failed to remove user, dying");
+                    process.exit(5);
+                }
+                if(badUsers.length > 0) {
+                    badUser = badUsers.pop();
+                    await delay(500);
+                    delUser(ws, badUser.uid);
+                } else {
+                    console.log("done removing users");
+                    resolve();
+                }
+            }
         });
+        delUser(ws, badUser.uid);
     });
-}
+};
+
+const sendUser = (ws, user) => {
+    process.stdout.write(".");
+    ws.send(JSON.stringify( {
+        "command":"userfile",
+        "uid":user.uid,
+        "pincode":user.pincode,
+        "user":user.username,
+        "acctype":1,
+        "acctype2":null,
+        "acctype3":null,
+        "acctype4":null,
+        "validuntil":user.validuntil
+    }));
+};
 
 const addUsers = (ws, users) => {
-    return users.map((u, i) => {
-        return new Promise(async (resolve, reject) => {
-            await delay(i * 1500);
-            ws.send(JSON.stringify( {
-                "command":"userfile",
-                "uid":u.uid,
-                "pincode":u.pincode,
-                "user":u.username,
-                "acctype":1,
-                "acctype2":null,
-                "acctype3":null,
-                "acctype4":null,
-                "validuntil":u.validuntil
-            }));
-            resolve();
+    if(users.length == 0) {
+        return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+        let user = users.pop();
+
+        ws.on('message', async (message) => {
+            let data = JSON.parse(message)
+            //console.log(data);
+            if(data.command == 'result' && data.resultof == 'userfile') {
+                if(data.result != true) {
+                    console.error("failed to add user, dying");
+                    process.exit(5);
+                }
+                if(users.length > 0) {
+                    user = users.pop();
+                    await delay(500);
+                    sendUser(ws, user);
+                } else {
+                    console.log("done adding users");
+                    resolve();
+                }
+            }
         });
+        sendUser(ws, user);
     });
-}
+};
 
 const isSameUser = (a, b) => a.uid == b.uid
     && a.username == b.username
@@ -171,11 +235,12 @@ const keypress = async () => {
     }))
 };
 
-(async () => {
+getExpectedUsers(fileToParse).then(async (expectedUsers) => {
     console.log('make sure nobody is logged into the web ui of the doors');
     console.log("press enter to continue...");
     await keypress();
-})().then(() => {
+    return expectedUsers;
+}).then((expectedUsers) => {
     config.doors.forEach((host) => {
         console.log(`connecting to: ${host.user}:${host.pass}@${host.ip}`);
         login(host.ip, host.user, host.pass)
@@ -186,7 +251,6 @@ const keypress = async () => {
                 console.log('connected to websocket');
                 await delay(1000);
                 const actualUsers = await getActualUsers(ws);
-                const expectedUsers = await getExpectedUsers(fileToParse);
 
                 const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
                 const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
@@ -199,12 +263,21 @@ const keypress = async () => {
                 //console.log("duplicate users");
                 //console.log(duplicateUsers);
 
-                console.log(`deleting ${badUsers.length} users`);
-                console.log(`adding ${missingUsers.length} users`);
-                await deleteUsers(ws, badUsers);
-                console.log("done removing");
-                await Promise.all(addUsers(ws, missingUsers));
-                console.log("done adding");
+                if(badUsers.length > 0) {
+                    console.log(`deleting ${badUsers.length} users`);
+                    await delay(1000);
+                    await deleteUsers(ws, badUsers);
+                    console.log("done removing");
+                    await delay(1000);
+                }
+                if(users.length > 0) {
+                    console.log(`adding ${missingUsers.length} users`);
+                    await addUsers(ws, missingUsers);
+                    console.log("done adding");
+                }
+                if(badUsers.length > 0 && users.length > 0) {
+                    console.log("nothing to do =D");
+                }
                 process.exit(0);
             });
     });
