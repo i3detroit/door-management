@@ -49,7 +49,7 @@ addUser() {
         doorip=$(echo "$door" | jq -r '.ip');
         doortopic=$(echo "$door" | jq -r '.topic');
         cmd=$(jq -cn \
-            --arg key "$key" \
+            --arg key "$(perl -le "print hex('$key');")" \
             --arg name "$name" \
             --arg pin "$pin" \
             --arg doorip "$doorip" \
