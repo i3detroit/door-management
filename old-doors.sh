@@ -18,8 +18,10 @@ Usage: $(basename "${BASH_SOURCE[0]}") -h
        $(basename "${BASH_SOURCE[0]}") remove> <key>
     add/remove users to fork door controllers over mqtt
     users cofig.json in dir of script
+    <key> should be decimal, what is printed on the blue key fobs
 Available options:
   -h, --help       display this help and exit
+  -H, --hex        input <key> as hex not decimal
 EOF
 
     # if args, exit 1 else exit 0
@@ -49,7 +51,7 @@ addUser() {
         doorip=$(echo "$door" | jq -r '.ip');
         doortopic=$(echo "$door" | jq -r '.topic');
         cmd=$(jq -cn \
-            --arg key "$(perl -le "print hex('$key');")" \
+            --arg key "$key" \
             --arg name "$name" \
             --arg pin "$pin" \
             --arg doorip "$doorip" \
@@ -78,16 +80,18 @@ removeUser() {
 }
 
 # getopt short options go together, long options have commas
-TEMP=$(getopt -o h --long help -n "$0" -- "$@")
+TEMP=$(getopt -o hH --long help,hex -n "$0" -- "$@")
 #shellcheck disable=SC2181
 if [ $? != 0 ] ; then
     die "something wrong with getopt"
 fi
 eval set -- "$TEMP"
 
+hex=false
 while true ; do
     case "$1" in
         -h|--help) help; exit 0; shift ;;
+        -H|--hex) hex=true ; shift ;;
         --) shift ; break ;;
         *) die "issue parsing args, unexpected argument '$0'!" ;;
     esac
@@ -102,6 +106,13 @@ key=${2:-}
 if [ -z "$key" ]; then
     help "need to pass in key"
 fi
+
+
+# if hex input, parse to decimal
+if [ "$hex" = true ]; then
+    key="$(perl -le "print hex('$key');")"
+fi
+
 
 if [ "$operation" == "add" ]; then
     name=${3:-}
