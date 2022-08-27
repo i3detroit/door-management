@@ -18,7 +18,7 @@ Usage: $(basename "${BASH_SOURCE[0]}") -h
        $(basename "${BASH_SOURCE[0]}") remove> <key>
     add/remove users to fork door controllers over mqtt
     users cofig.json in dir of script
-    <key> should be decimal, what is printed on the blue key fobs
+    <key> should be decimal without leading zeroes, what is printed on the blue key fobs
 Available options:
   -h, --help       display this help and exit
   -H, --hex        input <key> as hex not decimal
