@@ -20,8 +20,9 @@ Usage: $(basename "${BASH_SOURCE[0]}") -h
     users cofig.json in dir of script
     <key> should be decimal without leading zeroes, what is printed on the blue key fobs
 Available options:
-  -h, --help       display this help and exit
-  -H, --hex        input <key> as hex not decimal
+  -h, --help        display this help and exit
+  -H, --hex         input <key> as hex not decimal
+      --ignore-dead ignore if doors are offline
 EOF
 
     # if args, exit 1 else exit 0
@@ -80,7 +81,7 @@ removeUser() {
 }
 
 # getopt short options go together, long options have commas
-TEMP=$(getopt -o hH --long help,hex -n "$0" -- "$@")
+TEMP=$(getopt -o hH --long help,hex,ignore-dead -n "$0" -- "$@")
 #shellcheck disable=SC2181
 if [ $? != 0 ] ; then
     die "something wrong with getopt"
@@ -88,10 +89,12 @@ fi
 eval set -- "$TEMP"
 
 hex=false
+ignoreDead=false
 while true ; do
     case "$1" in
         -h|--help) help; exit 0; shift ;;
         -H|--hex) hex=true ; shift ;;
+        --ignore-dead) ignoreDead=true ; shift ;;
         --) shift ; break ;;
         *) die "issue parsing args, unexpected argument '$0'!" ;;
     esac
@@ -113,6 +116,40 @@ if [ "$hex" = true ]; then
     key="$(perl -le "print hex('$key');")"
 fi
 
+# run doorHeartbeat.sh for each door, it will say if door is alive or dead
+# collect PID in pids array
+pids=()
+doorNames=()
+for door in $doors; do
+    doorName=$(echo "$door" | jq -r '.hostname');
+    doorTopic=$(echo "$door" | jq -r '.topic');
+    doorNames+=("$doorName")
+    msg "listening for $doorName..."
+    ./doorHeartbeat.sh "$mqttHost" "$mqttPort" "$doorName" "$doorTopic/sync" >/dev/null & pids+=($!)
+done
+
+# wait for each pid, save return code in rets array
+rets=()
+for pid in ${pids[*]}; do
+    ret=0
+    wait "$pid"  || ret=$?
+    rets+=("$ret")
+done
+
+# check if any doors are dead
+dead=false
+for i in "${!rets[@]}"; do
+    if [[ "${rets[$i]}" -ne 0 ]]; then
+        msg "door ${doorNames[$i]} is dead"
+        dead=true
+    fi
+done
+
+if [ "$dead" = true ] && [ "$ignoreDead" = false ]; then
+    die "some doors were offline, please fix or --ignore-dead"
+fi
+
+msg "all good, sending"
 
 if [ "$operation" == "add" ]; then
     name=${3:-}
