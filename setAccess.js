@@ -7,7 +7,7 @@ const fs = require('fs');
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-const csvHeaders = ["CID", "name", "key", "PIN"];
+const csvHeaders = ["CID", "name", "key (HEX)", "PIN"];
 
 const args = process.argv.slice(2);
 if(args.length != 1 || args[0] == "-h" || args[0] == "--help") {
@@ -37,6 +37,7 @@ const hasSubArray = (master, sub) => {
 }
 
 
+//TODO: blank lines
 const getExpectedUsers = (filename) => {
     return csv()
         .fromFile(filename)
@@ -46,7 +47,7 @@ const getExpectedUsers = (filename) => {
                 process.exit(5);
             }
             return {
-                uid: user.key,
+                uid: parseInt(user.key, 16).toString(16), // has to be lowercase?
                 acctype: 1,
                 username: `${user.CID}: ${user.name}`,
                 validuntil: 4200000000, //year 2103, probably fine
@@ -76,7 +77,7 @@ const login = (host, username, password) => {
         if (badResponse.statusCode == 401) {
             throw new Error("bad password");
         } else {
-            throw new Error({"msg": "unknown login issue", "err": err});
+            throw new Error({"msg": "unknown login issue", "err": badResponse});
         }
     })
 }
@@ -236,6 +237,7 @@ const keypress = async () => {
 };
 
 getExpectedUsers(fileToParse).then(async (expectedUsers) => {
+    console.log(expectedUsers.length);
     console.log('make sure nobody is logged into the web ui of the doors');
     console.log("press enter to continue...");
     await keypress();
@@ -252,6 +254,8 @@ getExpectedUsers(fileToParse).then(async (expectedUsers) => {
                 await delay(1000);
                 const actualUsers = await getActualUsers(ws);
 
+                console.log(`expected ${expectedUsers.length} users`);
+                console.log(`actual ${actualUsers.length} users`);
                 const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
                 const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
                 // I guess it won't let us add duplicate UIDs
@@ -270,7 +274,7 @@ getExpectedUsers(fileToParse).then(async (expectedUsers) => {
                     console.log("done removing");
                     await delay(1000);
                 }
-                if(users.length > 0) {
+                if(missingUsers.length > 0) {
                     console.log(`adding ${missingUsers.length} users`);
                     await addUsers(ws, missingUsers);
                     console.log("done adding");
