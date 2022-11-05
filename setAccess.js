@@ -47,7 +47,7 @@ const getExpectedUsers = (filename) => {
                 process.exit(5);
             }
             return {
-                uid: parseInt(user.key, 16).toString(16), // has to be lowercase?
+                uid: parseInt(user["key (HEX)"], 16).toString(16), // has to be lowercase?
                 acctype: 1,
                 username: `${user.CID}: ${user.name}`,
                 validuntil: 4200000000, //year 2103, probably fine
@@ -238,6 +238,7 @@ const keypress = async () => {
 
 getExpectedUsers(fileToParse).then(async (expectedUsers) => {
     console.log(expectedUsers.length);
+    console.log(expectedUsers[0]);
     console.log('make sure nobody is logged into the web ui of the doors');
     console.log("press enter to continue...");
     await keypress();
