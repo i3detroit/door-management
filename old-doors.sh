@@ -99,7 +99,6 @@ while true ; do
         *) die "issue parsing args, unexpected argument '$0'!" ;;
     esac
 done
-
 operation=${1:-}
 if [ -z "$operation" ]; then
     help "need to pass in operation(add/remove)"
@@ -116,17 +115,19 @@ if [ "$hex" = true ]; then
     key="$(perl -le "print hex('$key');")"
 fi
 
-# run doorHeartbeat.sh for each door, it will say if door is alive or dead
-# collect PID in pids array
-pids=()
-doorNames=()
-for door in $doors; do
-    doorName=$(echo "$door" | jq -r '.hostname');
-    doorTopic=$(echo "$door" | jq -r '.topic');
-    doorNames+=("$doorName")
-    msg "listening for $doorName..."
-    ./doorHeartbeat.sh "$mqttHost" "$mqttPort" "$doorName" "$doorTopic/sync" >/dev/null & pids+=($!)
-done
+
+if [ "$ignoreDead" = false ]; then
+    # run doorHeartbeat.sh for each door, it will say if door is alive or dead
+    # collect PID in pids array
+    pids=()
+    doorNames=()
+    for door in $doors; do
+        doorName=$(echo "$door" | jq -r '.hostname');
+        doorTopic=$(echo "$door" | jq -r '.topic');
+        doorNames+=("$doorName")
+        msg "listening for $doorName..."
+        ./doorHeartbeat.sh "$mqttHost" "$mqttPort" "$doorName" "$doorTopic/sync" >/dev/null & pids+=($!)
+    done
 
 # wait for each pid, save return code in rets array
 rets=()
@@ -136,17 +137,18 @@ for pid in ${pids[*]}; do
     rets+=("$ret")
 done
 
-# check if any doors are dead
-dead=false
-for i in "${!rets[@]}"; do
-    if [[ "${rets[$i]}" -ne 0 ]]; then
-        msg "door ${doorNames[$i]} is dead"
-        dead=true
-    fi
-done
+    # check if any doors are dead
+    dead=false
+    for i in "${!rets[@]}"; do
+        if [[ "${rets[$i]}" -ne 0 ]]; then
+            msg "door ${doorNames[$i]} is dead"
+            dead=true
+        fi
+    done
 
-if [ "$dead" = true ] && [ "$ignoreDead" = false ]; then
-    die "some doors were offline, please fix or --ignore-dead"
+    if [ "$dead" = true ]; then
+        die "some doors were offline, please fix or --ignore-dead"
+    fi
 fi
 
 msg "all good, sending"
