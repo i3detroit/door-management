@@ -69,14 +69,18 @@ const login = (host, username, password) => {
 
     return rp(loginOptions).then((response) => {
         if (response.statusCode != 200) {
-            throw new Error({"msg": "unknown login issue", "err": err});
+            console.log("unknown login issue, non 200 success response");
+            console.log(response);
+            throw new Error("unknown login issue");
         }
         return response.request.headers.authorization;
     }, (badResponse) => {
         if (badResponse.statusCode == 401) {
             throw new Error("bad password");
         } else {
-            throw new Error({"msg": "unknown login issue", "err": badResponse});
+            console.log("unknown login issue, bad response");
+            console.log(badResponse);
+            throw new Error("unknown login issue");
         }
     })
 }
