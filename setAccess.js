@@ -174,15 +174,15 @@ const deleteUsers = (ws, badUsers) => {
 const sendUser = (ws, user) => {
     process.stdout.write(".");
     ws.send(JSON.stringify( {
-        "command":"userfile",
-        "uid":user.uid,
-        "pincode":user.pincode,
-        "user":user.username,
-        "acctype":1,
-        "acctype2":null,
-        "acctype3":null,
-        "acctype4":null,
-        "validuntil":user.validuntil
+        "command": "userfile",
+        "uid": user.uid,
+        "pincode": user.pincode,
+        "user": user.username,
+        "acctype": user.acctype,
+        "acctype2": null,
+        "acctype3": null,
+        "acctype4": null,
+        "validuntil": user.validuntil
     }));
 };
 
@@ -271,20 +271,21 @@ getExpectedUsers(fileToParse).then(async (expectedUsers) => {
                 //console.log("duplicate users");
                 //console.log(duplicateUsers);
 
-                if(badUsers.length > 0) {
-                    console.log(`deleting ${badUsers.length} users`);
-                    await delay(1000);
-                    await deleteUsers(ws, badUsers);
-                    console.log("done removing");
-                    await delay(1000);
-                }
-                if(missingUsers.length > 0) {
-                    console.log(`adding ${missingUsers.length} users`);
-                    await addUsers(ws, missingUsers);
-                    console.log("done adding");
-                }
-                if(badUsers.length > 0 && users.length > 0) {
+                if(badUsers.length == 0 && missingUsers.length == 0) {
                     console.log("nothing to do =D");
+                } else {
+                    if(badUsers.length > 0) {
+                        await delay(1000);
+                        console.log(`deleting ${badUsers.length} users`);
+                        await deleteUsers(ws, badUsers);
+                        console.log("done removing");
+                    }
+                    if(missingUsers.length > 0) {
+                        await delay(1000);
+                        console.log(`adding ${missingUsers.length} users`);
+                        await addUsers(ws, missingUsers);
+                        console.log("done adding");
+                    }
                 }
                 process.exit(0);
             });
