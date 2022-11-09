@@ -37,6 +37,11 @@ const hasSubArray = (master, sub) => {
 }
 
 
+const userTypes = {
+    Always: 1,
+    Admin: 99,
+    Disabled: 0,
+};
 const getExpectedUsers = (filename) => {
     return csv()
         .fromFile(filename)
@@ -47,7 +52,7 @@ const getExpectedUsers = (filename) => {
             }
             return {
                 uid: parseInt(user["key (HEX)"], 16).toString(16), // has to be lowercase?
-                acctype: 1,
+                acctype: userTypes.Admin,
                 username: `${user.CID}: ${user.name}`,
                 validuntil: 4200000000, //year 2103, probably fine
                 pincode: user.PIN
@@ -85,11 +90,6 @@ const login = (host, username, password) => {
     })
 }
 
-const userTypes = {
-    Always: 1,
-    Disabled: 0,
-    Admin: 99,
-};
 
 const getActualUsers = (ws) => {
     return new Promise((resolve, reject) => {
@@ -101,8 +101,8 @@ const getActualUsers = (ws) => {
                 users = users.concat(data.list);
                 console.log(`parsed userlist page ${data.page} of ${data.haspages}`);
                 if(data.page < data.haspages) {
-                    await delay(3000);
-                    ws.send('{"command":"userlist", "page":' + (data.page + 1) + '}');
+                    await delay(500);
+                    ws.send(`{"command":"userlist", "page":${data.page + 1}}`);
                 } else {
                     resolve(users);
                 }
