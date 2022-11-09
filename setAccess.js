@@ -37,7 +37,6 @@ const hasSubArray = (master, sub) => {
 }
 
 
-//TODO: blank lines
 const getExpectedUsers = (filename) => {
     return csv()
         .fromFile(filename)
@@ -53,7 +52,7 @@ const getExpectedUsers = (filename) => {
                 validuntil: 4200000000, //year 2103, probably fine
                 pincode: user.PIN
             };
-        }));
+        }).filter(user => user.uid != "NaN")); // assume that if we can't parse the key field the line is invalid
 };
 
 // return a promise to a working authorization header
