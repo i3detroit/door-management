@@ -1,0 +1,3 @@
+#!/bin/bash
+
+mosquitto_pub -t "i3/doors/a-side-main/cmd" -m '{"cmd":"opendoor", "doorip":"10.13.107.15"}' -h 10.13.0.22
