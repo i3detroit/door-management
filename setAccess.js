@@ -7,7 +7,7 @@ const fs = require('fs');
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-const csvHeaders = ["CID", "name", "key (HEX)", "PIN"];
+const csvHeaders = ["CID", "name", "key (DEC)", "PIN"];
 
 const args = process.argv.slice(2);
 if(args.length != 1 || args[0] == "-h" || args[0] == "--help") {
@@ -51,7 +51,7 @@ const getExpectedUsers = (filename) => {
                 process.exit(5);
             }
             return {
-                uid: parseInt(user["key (HEX)"], 16).toString(16), // has to be lowercase?
+                uid: parseInt(user["key (DEC)"]).toString(),
                 acctype: userTypes.Admin,
                 username: `${user.CID}: ${user.name}`,
                 validuntil: 4200000000, //year 2103, probably fine
@@ -173,17 +173,19 @@ const deleteUsers = (ws, badUsers) => {
 
 const sendUser = (ws, user) => {
     process.stdout.write(".");
-    ws.send(JSON.stringify( {
+    let command = {
         "command": "userfile",
-        "uid": user.uid,
-        "pincode": user.pincode,
+        "uid": user.uid.toString(),
+        "pincode": user.pincode.toString(),
         "user": user.username,
         "acctype": user.acctype,
         "acctype2": null,
         "acctype3": null,
         "acctype4": null,
         "validuntil": user.validuntil
-    }));
+    };
+    //console.log(JSON.stringify(command));
+    ws.send(JSON.stringify(command));
 };
 
 const addUsers = (ws, users) => {
@@ -242,6 +244,14 @@ const keypress = async () => {
 getExpectedUsers(fileToParse).then(async (expectedUsers) => {
     console.log(expectedUsers.length);
     console.log(expectedUsers[0]);
+
+    const duplicateUsers = duplicates( expectedUsers, (a, b) => a.uid == b.uid);
+    if(duplicateUsers.length > 0) {
+        console.log("duplicate UIDs, fix config!");
+        console.log(duplicateUsers.map(u => u.uid));
+        process.exit(1);
+    }
+
     console.log('make sure nobody is logged into the web ui of the doors');
     console.log("press enter to continue...");
     await keypress();
@@ -262,14 +272,10 @@ getExpectedUsers(fileToParse).then(async (expectedUsers) => {
                 console.log(`actual ${actualUsers.length} users`);
                 const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
                 const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
-                // I guess it won't let us add duplicate UIDs
-                //const duplicateUsers = duplicates( actualUsers, isSameUser);
                 //console.log("bad users");
                 //console.log(badUsers);
                 //console.log("missing users");
                 //console.log(missingUsers);
-                //console.log("duplicate users");
-                //console.log(duplicateUsers);
 
                 if(badUsers.length == 0 && missingUsers.length == 0) {
                     console.log("nothing to do =D");
