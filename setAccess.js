@@ -31,6 +31,7 @@ try {
 }
 
 let config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'config.json')));
+let logFile = path.resolve(__dirname, 'log');
 
 
 const hasSubArray = (master, sub) => {
@@ -136,11 +137,19 @@ const connect = (auth, ip) => {
     });
 };
 
-const delUser = (ws, badUID) => {
+
+const logUser = (action, user) => {
+    fs.appendFile(logFile, `${new Date().toISOString()} [${action}] name:"${user.username}", uid:"${user.uid}", pin:"${user.pincode}"\n`, (err) => {
+        if (err) console.error(`failed to write to logfile ${logFile}`);
+    });
+}
+const delUser = (ws, user) => {
+    logUser("del", user);
+
     process.stdout.write(".");
     ws.send(JSON.stringify( {
         "command": "remove",
-        "uid": badUID
+        "uid": user.uid
     }));
 };
 const deleteUsers = (ws, badUsers) => {
@@ -161,18 +170,19 @@ const deleteUsers = (ws, badUsers) => {
                 if(badUsers.length > 0) {
                     badUser = badUsers.pop();
                     await delay(500);
-                    delUser(ws, badUser.uid);
+                    delUser(ws, badUser);
                 } else {
                     console.log("done removing users");
                     resolve();
                 }
             }
         });
-        delUser(ws, badUser.uid);
+        delUser(ws, badUser);
     });
 };
 
 const sendUser = (ws, user) => {
+    logUser("add", user);
     process.stdout.write(".");
     let command = {
         "command": "userfile",
