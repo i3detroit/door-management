@@ -4,6 +4,7 @@ const WebSocket = require("ws");
 const rp = require('request-promise-native');
 const csv=require('csvtojson')
 const fs = require('fs');
+const path = require('path');
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -29,7 +30,7 @@ try {
     process.exit(2);
 }
 
-let config = JSON.parse(fs.readFileSync('config.json'));
+let config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'config.json')));
 
 
 const hasSubArray = (master, sub) => {
