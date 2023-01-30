@@ -11,13 +11,15 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const csvHeaders = ["CID", "name", "key (DEC)", "PIN"];
 
 const args = process.argv.slice(2);
-if(args.length != 1 || args[0] == "-h" || args[0] == "--help") {
-    console.log("usage: setAccess.js <access.csv>");
+if((args.length != 1 && args.length != 2) || args[0] == "-h" || args[0] == "--help") {
+    console.log("usage: setAccess.js <access.csv> [door-name]");
     console.log("   update doors configured in config.json with people in access.csv");
+    console.log("   door name just is some substring of door hostname, so like 'a' or 'b'");
     console.log("   access.csv header: " + csvHeaders.join(', '));
     process.exit(1);
 }
 let fileToParse = args[0];
+let doorName=args[1]
 
 try {
     if (! fs.existsSync(fileToParse)) {
@@ -32,6 +34,18 @@ try {
 
 let config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'config.json')));
 let logFile = path.resolve(__dirname, 'log');
+
+let doorsToProgram = config.doors;
+if(doorName) {
+    doorsToProgram = config.doors.filter((door) => door.hostname.includes(doorName))
+}
+if(doorsToProgram.length == 0) {
+    console.error(`door ${doorName} not found in config file`);
+}
+console.log("programming the following doors:")
+doorsToProgram.forEach((door) => {
+    console.log(`    ${door.hostname}`);
+});
 
 
 const hasSubArray = (master, sub) => {
@@ -93,7 +107,7 @@ const login = (host, username, password) => {
 }
 
 
-const getActualUsers = (ws) => {
+const getActualUsers = (ws, hostname) => {
     return new Promise((resolve, reject) => {
         let users = [];
         ws.on('message', async (message) => {
@@ -101,7 +115,7 @@ const getActualUsers = (ws) => {
             //console.log(data);
             if(data.command == 'userlist') {
                 users = users.concat(data.list);
-                console.log(`parsed userlist page ${data.page} of ${data.haspages}`);
+                console.log(`${hostname} parsed userlist page ${data.page} of ${data.haspages}`);
                 if(data.page < data.haspages) {
                     await delay(500);
                     ws.send(`{"command":"userlist", "page":${data.page + 1}}`);
@@ -268,19 +282,19 @@ getExpectedUsers(fileToParse).then(async (expectedUsers) => {
     await keypress();
     return expectedUsers;
 }).then((expectedUsers) => {
-    config.doors.forEach((host) => {
+    Promise.all(doorsToProgram.map((host) => {
         console.log(`connecting to: ${host.user}:${host.pass}@${host.ip}`);
-        login(host.ip, host.user, host.pass)
+        return login(host.ip, host.user, host.pass)
             .then((auth) => {
-                console.log('logged in');
+                console.log(`${host.hostname} logged in`);
                 return connect(auth, host.ip)
             }) .then(async (ws) => {
-                console.log('connected to websocket');
+                console.log(`${host.hostname} connected to websocket`);
                 await delay(1000);
-                const actualUsers = await getActualUsers(ws);
+                const actualUsers = await getActualUsers(ws, host.hostname);
 
-                console.log(`expected ${expectedUsers.length} users`);
-                console.log(`actual ${actualUsers.length} users`);
+                console.log(`${host.hostname} expected ${expectedUsers.length} users`);
+                console.log(`${host.hostname} actual ${actualUsers.length} users`);
                 const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
                 const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
                 //console.log("bad users");
@@ -289,22 +303,24 @@ getExpectedUsers(fileToParse).then(async (expectedUsers) => {
                 //console.log(missingUsers);
 
                 if(badUsers.length == 0 && missingUsers.length == 0) {
-                    console.log("nothing to do =D");
+                    console.log(`${host.hostname} nothing to do =D`);
                 } else {
                     if(badUsers.length > 0) {
                         await delay(1000);
-                        console.log(`deleting ${badUsers.length} users`);
+                        console.log(`${host.hostname} deleting ${badUsers.length} users`);
                         await deleteUsers(ws, badUsers);
-                        console.log("done removing");
+                        console.log(`${host.hostname} done removing`);
                     }
                     if(missingUsers.length > 0) {
                         await delay(1000);
-                        console.log(`adding ${missingUsers.length} users`);
+                        console.log(`${host.hostname} adding ${missingUsers.length} users`);
                         await addUsers(ws, missingUsers);
-                        console.log("done adding");
+                        console.log(`${host.hostname} done adding`);
                     }
                 }
-                process.exit(0);
             });
+    })).then((whatever) => {
+        console.log("all doene");
+        process.exit(0);
     });
 });
