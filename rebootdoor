@@ -1,9 +1,8 @@
 #!/bin/bash
-
-#!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")"
 
+token=$(cat ~/hasstoken)
 
 # shellcheck disable=SC2120
 help () {
@@ -11,8 +10,8 @@ help () {
     [ $# == 0 ] || echo "$*"
 
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") a|b
-    opens doors, you must specifiy which door to open
+Usage: $(basename "${BASH_SOURCE[0]}") [a|b]
+    reboot doors, optionally pass which door to reboot
 Available options:
   -h, --help       display this help and exit
 EOF
@@ -51,19 +50,26 @@ done
 
 targetDoor=${1:-}
 shift || true
-if [ "$targetDoor" != "a" ] && [ "$targetDoor" != "b" ]; then
-    die "target door valeu of '$targetDoor' is not valid, valid optins are 'a', or 'b'"
+if [ -z "$targetDoor" ]; then
+    targetDoor="both"
+fi
+if [ "$targetDoor" != "a" ] && [ "$targetDoor" != "b" ] && [ "$targetDoor" != "both" ]; then
+    die "target door valeu of '$targetDoor' is not valid, valid optins are 'a', 'b', or 'both'"
 fi
 
 reboot () {
     door=$1
-    ip=$2
-    mosquitto_pub -t "i3/doors/${door}/cmd" -m "{\"cmd\":\"opendoor\", \"doorip\":\"${ip}\"}" -h 10.13.0.22
+    curl -X POST \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $token" \
+        -d "{\"entity_id\":\"script.${door}_side_keypad_power_cycle\"}" \
+        http://10.13.0.22/api/services/script/turn_on
+    echo
 }
 
-if [[ "$targetDoor" = "a" ]]; then
-    reboot a-side-main 10.13.107.15
+if [[ "$targetDoor" = "a" ]] || [[ "$targetDoor" = "both" ]]; then
+    reboot a
 fi
-if [[ "$targetDoor" = "b" ]]; then
-    reboot b-side-office 10.13.107.167
+if [[ "$targetDoor" = "b" ]] || [[ "$targetDoor" = "both" ]]; then
+    reboot b
 fi
