@@ -108,24 +108,32 @@ const login = (host, username, password) => {
 
 
 const getActualUsers = (ws, hostname) => {
+    let page = 1;
     return new Promise((resolve, reject) => {
         let users = [];
         ws.on('message', async (message) => {
-            let data = JSON.parse(message)
+            let data;
+            try {
+                data = JSON.parse(message)
+            } catch(e) {
+                ws.send(`{"command":"userlist", "page":${page}}`);
+                return;
+            }
             //console.log(data);
             if(data.command == 'userlist') {
+                page++;
                 users = users.concat(data.list);
                 console.log(`${hostname} parsed userlist page ${data.page} of ${data.haspages}`);
                 if(data.page < data.haspages) {
                     await delay(500);
-                    ws.send(`{"command":"userlist", "page":${data.page + 1}}`);
+                    ws.send(`{"command":"userlist", "page":${page}}`);
                 } else {
                     resolve(users);
                 }
             }
         });
 
-        ws.send('{"command":"userlist", "page":1}');
+        ws.send(`{"command":"userlist", "page":${page}}`);
     });
 };
 
