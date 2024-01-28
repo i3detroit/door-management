@@ -2,7 +2,7 @@
 'use strict';
 const WebSocket = require("ws");
 const rp = require('request-promise-native');
-const csv=require('csvtojson')
+const csv = require('csvtojson')
 const fs = require('fs');
 const path = require('path');
 
@@ -45,8 +45,8 @@ if(doorsToProgram.length == 0) {
 console.log("programming the following doors:")
 doorsToProgram.forEach((door) => {
     console.log(`    ${door.hostname}`);
+    door.userList = path.resolve(__dirname, door.userList)
 });
-
 
 const hasSubArray = (master, sub) => {
     return sub.every(el => master.includes(el));
@@ -70,6 +70,8 @@ const getExpectedUsers = (filename) => {
                 uid: parseInt(user["key (DEC)"]).toString(),
                 acctype: userTypes.Admin,
                 username: `${user.CID}: ${user.name}`,
+                cid: user.CID,
+                name: user.name,
                 validuntil: 4200000000, //year 2103, probably fine
                 pincode: user.PIN
             };
@@ -160,13 +162,27 @@ const connect = (auth, ip) => {
 };
 
 
-const logUser = (action, user) => {
-    fs.appendFile(logFile, `${new Date().toISOString()} [${action}] name:"${user.username}", uid:"${user.uid}", pin:"${user.pincode}"\n`, (err) => {
+const removeUserFromFile = (file, user) => {
+    const data = fs.readFileSync(file).toString();
+    // array of arrays
+    const linesArr = data.split('\r\n').map(line => line.split(','));
+    const filtered = linesArr.filter(line => !(line[0] == user.cid && line[1] == user.name && line[2] == user.uid && line[3] == user.pincode));
+    fs.writeFileSync(file, filtered.join('\r\n'));
+};
+const logUser = (success, action, door, user) => {
+    //console.log(`${success ? "successfuly" : "Failed to"} ${action} ${user.username} on ${door.hostname}`);
+    if(success) {
+        if(action == 'add') {
+            fs.appendFileSync(door.userList, `${user.cid},${user.name},${user.uid},${user.pincode}\r\n`);
+        } else if (action == 'del') {
+            removeUserFromFile(door.userList, user);
+        }
+    }
+    fs.appendFile(logFile, `${new Date().toISOString()} [${action}] success: ${success}, name:"${user.username}", uid:"${user.uid}", pin:"${user.pincode}"\n`, (err) => {
         if (err) console.error(`failed to write to logfile ${logFile}`);
     });
 }
 const delUser = (ws, user) => {
-    logUser("del", user);
 
     process.stdout.write(".");
     ws.send(JSON.stringify( {
@@ -174,37 +190,38 @@ const delUser = (ws, user) => {
         "uid": user.uid
     }));
 };
-const deleteUsers = (ws, badUsers) => {
+const deleteUsers = (door, badUsers) => {
     if(badUsers.length == 0) {
         return Promise.resolve();
     }
     return new Promise((resolve, reject) => {
         let badUser = badUsers.pop();
 
-        ws.on('message', async (message) => {
+        door.ws.on('message', async (message) => {
             let data = JSON.parse(message)
             //console.log(data);
             if(data.command == 'result' && data.resultof == 'remove') {
                 if(data.result != true) {
+                    logUser(false, 'del', door, badUser);
                     console.error("failed to remove user, dying");
                     process.exit(5);
                 }
+                logUser(true, 'del', door, badUser);
                 if(badUsers.length > 0) {
                     badUser = badUsers.pop();
                     await delay(500);
-                    delUser(ws, badUser);
+                    delUser(door.ws, badUser);
                 } else {
                     console.log("done removing users");
                     resolve();
                 }
             }
         });
-        delUser(ws, badUser);
+        delUser(door.ws, badUser);
     });
 };
 
 const sendUser = (ws, user) => {
-    logUser("add", user);
     process.stdout.write(".");
     let command = {
         "command": "userfile",
@@ -221,32 +238,34 @@ const sendUser = (ws, user) => {
     ws.send(JSON.stringify(command));
 };
 
-const addUsers = (ws, users) => {
+const addUsers = (door, users) => {
     if(users.length == 0) {
         return Promise.resolve();
     }
     return new Promise((resolve, reject) => {
         let user = users.pop();
 
-        ws.on('message', async (message) => {
+        door.ws.on('message', async (message) => {
             let data = JSON.parse(message)
             //console.log(data);
             if(data.command == 'result' && data.resultof == 'userfile') {
                 if(data.result != true) {
+                    logUser(false, 'add', door, user);
                     console.error("failed to add user, dying");
                     process.exit(5);
                 }
+                logUser(true, 'add', door, user);
                 if(users.length > 0) {
                     user = users.pop();
                     await delay(500);
-                    sendUser(ws, user);
+                    sendUser(door.ws, user);
                 } else {
                     console.log("done adding users");
                     resolve();
                 }
             }
         });
-        sendUser(ws, user);
+        sendUser(door.ws, user);
     });
 };
 
@@ -290,19 +309,21 @@ getExpectedUsers(fileToParse).then(async (expectedUsers) => {
     await keypress();
     return expectedUsers;
 }).then((expectedUsers) => {
-    Promise.all(doorsToProgram.map((host) => {
-        console.log(`connecting to: ${host.user}:${host.pass}@${host.ip}`);
-        return login(host.ip, host.user, host.pass)
+    Promise.all(doorsToProgram.map((door) => {
+        console.log(`connecting to: ${door.user}:${door.pass}@${door.ip}`);
+        return login(door.ip, door.user, door.pass)
             .then((auth) => {
-                console.log(`${host.hostname} logged in`);
-                return connect(auth, host.ip)
+                console.log(`${door.hostname} logged in`);
+                return connect(auth, door.ip)
             }) .then(async (ws) => {
-                console.log(`${host.hostname} connected to websocket`);
+                door.ws = ws; //TODO: make connect just modify door or something so we can reconnect transparently
+                console.log(`${door.hostname} connected to websocket`);
                 await delay(1000);
-                const actualUsers = await getActualUsers(ws, host.hostname);
+                //const actualUsers = await getActualUsers(door.ws, door.hostname);
+                const actualUsers = await getExpectedUsers(door.userList);
 
-                console.log(`${host.hostname} expected ${expectedUsers.length} users`);
-                console.log(`${host.hostname} actual ${actualUsers.length} users`);
+                console.log(`${door.hostname} expected ${expectedUsers.length} users`);
+                console.log(`${door.hostname} actual ${actualUsers.length} users`);
                 const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
                 const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
                 //console.log("bad users");
@@ -311,19 +332,19 @@ getExpectedUsers(fileToParse).then(async (expectedUsers) => {
                 //console.log(missingUsers);
 
                 if(badUsers.length == 0 && missingUsers.length == 0) {
-                    console.log(`${host.hostname} nothing to do =D`);
+                    console.log(`${door.hostname} nothing to do =D`);
                 } else {
                     if(badUsers.length > 0) {
                         await delay(1000);
-                        console.log(`${host.hostname} deleting ${badUsers.length} users`);
-                        await deleteUsers(ws, badUsers);
-                        console.log(`${host.hostname} done removing`);
+                        console.log(`${door.hostname} deleting ${badUsers.length} users`);
+                        await deleteUsers(door, badUsers);
+                        console.log(`${door.hostname} done removing`);
                     }
                     if(missingUsers.length > 0) {
                         await delay(1000);
-                        console.log(`${host.hostname} adding ${missingUsers.length} users`);
-                        await addUsers(ws, missingUsers);
-                        console.log(`${host.hostname} done adding`);
+                        console.log(`${door.hostname} adding ${missingUsers.length} users`);
+                        await addUsers(door, missingUsers);
+                        console.log(`${door.hostname} done adding`);
                     }
                 }
             });

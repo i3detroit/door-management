@@ -9,7 +9,8 @@
             "topic": "mqtt topic",
             "ip": "host",
             "user": "admin",
-            "pass": "admin pass"
+            "pass": "admin pass",
+            "userList": "whatever.csv"
         }
     ]
 }

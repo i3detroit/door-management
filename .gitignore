@@ -131,6 +131,7 @@ users.db
 .vscode/settings.json
 config.ini
 config.json
-access.csv
 
 node_modules
+*.csv
+log
