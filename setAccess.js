@@ -299,8 +299,8 @@ getExpectedUsers(fileToParse).then(async (expectedUsers) => {
 
     const duplicateUsers = duplicates( expectedUsers, (a, b) => a.uid == b.uid);
     if(duplicateUsers.length > 0) {
-        console.log("duplicate UIDs, fix config!");
-        console.log(duplicateUsers.map(u => u.uid));
+        console.log("duplicate UIDs, fix your access csv!");
+        console.log(duplicateUsers.map(du => expectedUsers.filter(u => u.uid == du.uid).map(u => `${u.name} -> ${u.uid}`)).flat().join("\n"));
         process.exit(1);
     }
 
