@@ -1,14 +1,40 @@
-#!/usr/bin/env nodejs
-'use strict';
-const WebSocket = require("ws");
-const rp = require('request-promise-native');
-const csv = require('csvtojson')
-const fs = require('fs');
-const path = require('path');
+#!/usr/bin/env node
+import WebSocket from "ws";
+import * as fs from "fs";
+import * as path from "path";
+import { isSameUser, writeUserCSVFile, readUserCSVFile, logUser } from "./src/fileStuff.js";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { AxiosDigestAuth } from '@lukesthl/ts-axios-digest-auth';
+
+
+const currentFile = fileURLToPath(import.meta.url);
+const currentDir = dirname(currentFile);
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const csvHeaders = ["CID", "name", "key (DEC)", "PIN"];
+const userTypes = {
+    Always: 1,
+    Admin: 99,
+    Disabled: 0,
+};
+const doorUser2user = (u) => {
+    const match = u.username.match(/([0-9]+) (.*)/);
+    const cid = match ? match[1] : "?";
+    const name = match ? match[2] : "?";
+    return {
+        uid: u.uid,
+        pincode: u.pincode,
+        name: name,
+        cid: cid,
+    };
+};
+const user2doorUser = (user) => ({
+    "uid": user.uid,
+    "pincode": user.pincode,
+    "user": `${user.cid} ${user.name}`,
+});
 
 const args = process.argv.slice(2);
 if((args.length != 1 && args.length != 2) || args[0] == "-h" || args[0] == "--help") {
@@ -32,8 +58,8 @@ try {
     process.exit(2);
 }
 
-let config = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'config.json')));
-let logFile = path.resolve(__dirname, 'log');
+let config = JSON.parse(fs.readFileSync(path.resolve(currentDir, 'config.json')));
+let logFile = path.resolve(currentDir, 'log');
 
 let doorsToProgram = config.doors;
 if(doorName) {
@@ -45,7 +71,7 @@ if(doorsToProgram.length == 0) {
 console.log("programming the following doors:")
 doorsToProgram.forEach((door) => {
     console.log(`    ${door.hostname}`);
-    door.userList = path.resolve(__dirname, door.userList)
+    door.userList = path.resolve(currentDir, door.userList)
 });
 
 const hasSubArray = (master, sub) => {
@@ -53,59 +79,29 @@ const hasSubArray = (master, sub) => {
 }
 
 
-const userTypes = {
-    Always: 1,
-    Admin: 99,
-    Disabled: 0,
-};
-const getExpectedUsers = (filename) => {
-    return csv()
-        .fromFile(filename)
-        .then((users) => users.map((user) => {
-            if(!hasSubArray(Object.keys(user), csvHeaders)) {
-                console.error("userfile has bad headers, expecting " + csvHeaders.join(', '));
-                process.exit(5);
-            }
-            return {
-                uid: parseInt(user["key (DEC)"]).toString(),
-                acctype: userTypes.Admin,
-                username: `${user.CID}: ${user.name}`,
-                cid: user.CID,
-                name: user.name,
-                validuntil: 4200000000, //year 2103, probably fine
-                pincode: user.PIN
-            };
-        }).filter(user => user.uid != "NaN")); // assume that if we can't parse the key field the line is invalid
-};
-
 // return a promise to a working authorization header
 const login = (host, username, password) => {
-    const loginOptions = {
-        uri: `http://${host}/login`,
-        'auth': {
-            'user': username,
-            'pass': password,
-            'sendImmediately': false
-        },
-        resolveWithFullResponse: true,
-    };
-
-    return rp(loginOptions).then((response) => {
-        if (response.statusCode != 200) {
+    const digestAuthClient = new AxiosDigestAuth({
+        username: username,
+        password: password,
+    });
+    return digestAuthClient.get(`http://${host}/login`)
+    .then((response) => {
+        if (response.status != 200) {
             console.log("unknown login issue, non 200 success response");
             console.log(response);
             throw new Error("unknown login issue");
         }
-        return response.request.headers.authorization;
-    }, (badResponse) => {
-        if (badResponse.statusCode == 401) {
+        return response.config.headers.authorization;
+    }).catch((badResponse) => {
+        if (badResponse.status == 401) {
             throw new Error("bad password");
         } else {
             console.log("unknown login issue, bad response");
             console.log(badResponse);
             throw new Error("unknown login issue");
         }
-    })
+    });
 }
 
 
@@ -124,13 +120,14 @@ const getActualUsers = (ws, hostname) => {
             //console.log(data);
             if(data.command == 'userlist') {
                 page++;
+                //console.log(data.list.map(u => doorUser2user(u)));
                 users = users.concat(data.list);
                 console.log(`${hostname} parsed userlist page ${data.page} of ${data.haspages}`);
                 if(data.page < data.haspages) {
                     await delay(500);
                     ws.send(`{"command":"userlist", "page":${page}}`);
                 } else {
-                    resolve(users);
+                    resolve(users.map(u => doorUser2user(u)));
                 }
             }
         });
@@ -161,27 +158,6 @@ const connect = (auth, ip) => {
     });
 };
 
-
-const removeUserFromFile = (file, user) => {
-    const data = fs.readFileSync(file).toString();
-    // array of arrays
-    const linesArr = data.split('\r\n').map(line => line.split(','));
-    const filtered = linesArr.filter(line => !(line[0] == user.cid && line[1] == user.name && line[2] == user.uid && line[3] == user.pincode));
-    fs.writeFileSync(file, filtered.join('\r\n'));
-};
-const logUser = (success, action, door, user) => {
-    //console.log(`${success ? "successfuly" : "Failed to"} ${action} ${user.username} on ${door.hostname}`);
-    if(success) {
-        if(action == 'add') {
-            fs.appendFileSync(door.userList, `${user.cid},${user.name},${user.uid},${user.pincode}\r\n`);
-        } else if (action == 'del') {
-            removeUserFromFile(door.userList, user);
-        }
-    }
-    fs.appendFile(logFile, `${new Date().toISOString()} [${action}] success: ${success}, name:"${user.username}", uid:"${user.uid}", pin:"${user.pincode}"\n`, (err) => {
-        if (err) console.error(`failed to write to logfile ${logFile}`);
-    });
-}
 const delUser = (ws, user) => {
 
     process.stdout.write(".");
@@ -202,11 +178,11 @@ const deleteUsers = (door, badUsers) => {
             //console.log(data);
             if(data.command == 'result' && data.resultof == 'remove') {
                 if(data.result != true) {
-                    logUser(false, 'del', door, badUser);
+                    logUser(logFile, false, 'del', door, badUser);
                     console.error("failed to remove user, dying");
                     process.exit(5);
                 }
-                logUser(true, 'del', door, badUser);
+                logUser(logFile, true, 'del', door, badUser);
                 if(badUsers.length > 0) {
                     badUser = badUsers.pop();
                     await delay(500);
@@ -225,14 +201,12 @@ const sendUser = (ws, user) => {
     process.stdout.write(".");
     let command = {
         "command": "userfile",
-        "uid": user.uid.toString(),
-        "pincode": user.pincode.toString(),
-        "user": user.username,
-        "acctype": user.acctype,
+        "acctype": userTypes.Admin,
         "acctype2": null,
         "acctype3": null,
         "acctype4": null,
-        "validuntil": user.validuntil
+        "validuntil": 4200000000, //year 2103, probably fine
+        ...user2doorUser(user),
     };
     //console.log(JSON.stringify(command));
     ws.send(JSON.stringify(command));
@@ -250,11 +224,11 @@ const addUsers = (door, users) => {
             //console.log(data);
             if(data.command == 'result' && data.resultof == 'userfile') {
                 if(data.result != true) {
-                    logUser(false, 'add', door, user);
+                    logUser(logFile, false, 'add', door, user);
                     console.error("failed to add user, dying");
                     process.exit(5);
                 }
-                logUser(true, 'add', door, user);
+                logUser(logFile, true, 'add', door, user);
                 if(users.length > 0) {
                     user = users.pop();
                     await delay(500);
@@ -269,11 +243,6 @@ const addUsers = (door, users) => {
     });
 };
 
-const isSameUser = (a, b) => a.uid == b.uid
-    && a.username == b.username
-    && a.pincode == b.pincode
-    && a.acctype == b.acctype
-    && a.validuntil == b.validuntil;
 
 // Get items that only occur in the left array,
 // using the compareFunction to determine equality.
@@ -293,63 +262,75 @@ const keypress = async () => {
     }))
 };
 
-getExpectedUsers(fileToParse).then(async (expectedUsers) => {
-    console.log(expectedUsers.length);
-    console.log(expectedUsers[0]);
+const expectedUsers = readUserCSVFile(fileToParse);
 
-    const duplicateUsers = duplicates( expectedUsers, (a, b) => a.uid == b.uid);
-    if(duplicateUsers.length > 0) {
-        console.log("duplicate UIDs, fix your access csv!");
-        console.log(duplicateUsers.map(du => expectedUsers.filter(u => u.uid == du.uid).map(u => `${u.name} -> ${u.uid}`)).flat().join("\n"));
-        process.exit(1);
-    }
+const duplicateUsers = duplicates( expectedUsers, (a, b) => a.uid == b.uid);
+if(duplicateUsers.length > 0) {
+    console.log("duplicate UIDs, fix your access csv!");
+    console.log(duplicateUsers.map(du => expectedUsers.filter(u => u.uid == du.uid).map(u => `${u.name} -> ${u.uid}`)).flat().join("\n"));
+    process.exit(1);
+}
 
-    console.log('make sure nobody is logged into the web ui of the doors');
-    console.log("press enter to continue...");
-    await keypress();
-    return expectedUsers;
-}).then((expectedUsers) => {
-    Promise.all(doorsToProgram.map((door) => {
-        console.log(`connecting to: ${door.user}:${door.pass}@${door.ip}`);
-        return login(door.ip, door.user, door.pass)
-            .then((auth) => {
-                console.log(`${door.hostname} logged in`);
-                return connect(auth, door.ip)
-            }) .then(async (ws) => {
-                door.ws = ws; //TODO: make connect just modify door or something so we can reconnect transparently
-                console.log(`${door.hostname} connected to websocket`);
-                await delay(1000);
-                //const actualUsers = await getActualUsers(door.ws, door.hostname);
-                const actualUsers = await getExpectedUsers(door.userList);
+console.log(`input: ${expectedUsers.length} users`);
+console.log(expectedUsers[0]);
 
-                console.log(`${door.hostname} expected ${expectedUsers.length} users`);
-                console.log(`${door.hostname} actual ${actualUsers.length} users`);
-                const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
-                const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
-                //console.log("bad users");
-                //console.log(badUsers);
-                //console.log("missing users");
-                //console.log(missingUsers);
 
-                if(badUsers.length == 0 && missingUsers.length == 0) {
-                    console.log(`${door.hostname} nothing to do =D`);
+Promise.all(doorsToProgram.map((door) => {
+    console.log(`connecting to: ${door.user}:${door.pass}@${door.ip}`);
+    return login(door.ip, door.user, door.pass)
+        .then((auth) => {
+            console.log(`${door.hostname} logged in`);
+            return connect(auth, door.ip)
+        }).then(async (ws) => {
+            door.ws = ws; //TODO: make connect just modify door or something so we can reconnect transparently
+            console.log(`${door.hostname} connected to websocket`);
+            await delay(1000);
+
+            const getUsers = (fetchActualUsers, door) => {
+                if(fetchActualUsers) {
+                    // read from door, not user file
+                    return getActualUsers(door.ws, door.hostname).then((actualUsers) => {
+                        // update cache with whatever we read from door
+                        writeUserCSVFile(door.userList, actualUsers);
+                        return actualUsers;
+                    });
                 } else {
-                    if(badUsers.length > 0) {
-                        await delay(1000);
-                        console.log(`${door.hostname} deleting ${badUsers.length} users`);
-                        await deleteUsers(door, badUsers);
-                        console.log(`${door.hostname} done removing`);
-                    }
-                    if(missingUsers.length > 0) {
-                        await delay(1000);
-                        console.log(`${door.hostname} adding ${missingUsers.length} users`);
-                        await addUsers(door, missingUsers);
-                        console.log(`${door.hostname} done adding`);
-                    }
+                    // TODO: readUserCSVFile needs to de duplicate
+                    return readUserCSVFile(door.userList);
                 }
-            });
-    })).then((whatever) => {
-        console.log("all doene");
-        process.exit(0);
-    });
+            }
+
+            // TODO input flag to ask door vs cache
+            const fetchActualUsers = true;
+            const actualUsers = await getUsers(fetchActualUsers, door);
+
+            const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
+            const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
+            console.log(`${door.hostname} users to remove: ${badUsers.length}`);
+            console.log(`${door.hostname} users to add: ${missingUsers.length}`);
+            console.log("bad users");
+            console.log(badUsers[0]);
+            console.log("missing users");
+            console.log(missingUsers[0]);
+
+            if(badUsers.length == 0 && missingUsers.length == 0) {
+                console.log(`${door.hostname} nothing to do =D`);
+            } else {
+                if(badUsers.length > 0) {
+                    await delay(1000);
+                    console.log(`${door.hostname} deleting ${badUsers.length} users`);
+                    await deleteUsers(door, badUsers);
+                    console.log(`${door.hostname} done removing`);
+                }
+                if(missingUsers.length > 0) {
+                    await delay(1000);
+                    console.log(`${door.hostname} adding ${missingUsers.length} users`);
+                    await addUsers(door, missingUsers);
+                    console.log(`${door.hostname} done adding`);
+                }
+            }
+        });
+})).then((whatever) => {
+    console.log("all done");
+    process.exit(0);
 });
