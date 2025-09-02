@@ -107,6 +107,7 @@ const login = (host, username, password) => {
 
 const getActualUsers = (ws, hostname) => {
     let page = 1;
+    let haspages = 2;
     return new Promise((resolve, reject) => {
         let users = [];
         ws.on('message', async (message) => {
@@ -119,11 +120,15 @@ const getActualUsers = (ws, hostname) => {
             }
             //console.log(data);
             if(data.command == 'userlist') {
+                // sometimes it doesn't return haspages and this makes us sad
+                if(data.haspages) {
+                    haspages = data.haspages;
+                }
                 page++;
                 //console.log(data.list.map(u => doorUser2user(u)));
                 users = users.concat(data.list);
                 console.log(`${hostname} parsed userlist page ${data.page} of ${data.haspages}`);
-                if(data.page < data.haspages) {
+                if(data.page < haspages) {
                     await delay(500);
                     ws.send(`{"command":"userlist", "page":${page}}`);
                 } else {
