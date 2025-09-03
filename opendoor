@@ -52,7 +52,7 @@ done
 targetDoor=${1:-}
 shift || true
 if [ "$targetDoor" != "a" ] && [ "$targetDoor" != "b" ]; then
-    die "target door valeu of '$targetDoor' is not valid, valid optins are 'a', or 'b'"
+    die "target door value of '$targetDoor' is not valid, valid options are 'a', or 'b'"
 fi
 
 reboot () {
