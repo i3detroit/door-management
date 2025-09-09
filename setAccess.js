@@ -3,6 +3,7 @@ import WebSocket from "ws";
 import * as fs from "fs";
 import * as path from "path";
 import { isSameUser, writeUserCSVFile, readUserCSVFile, logUser } from "./src/fileStuff.js";
+import { fetchHelloClubAndOverride } from "./src/helloClub.js";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { AxiosDigestAuth } from '@lukesthl/ts-axios-digest-auth';
@@ -20,7 +21,7 @@ const userTypes = {
     Disabled: 0,
 };
 const doorUser2user = (u) => {
-    const match = u.username.match(/([0-9]+) (.*)/);
+    const match = u.username.match(/([0-9a-f]+) (.*)/);
     const cid = match ? match[1] : "?";
     const name = match ? match[2] : "?";
     return {
@@ -267,7 +268,7 @@ const keypress = async () => {
     }))
 };
 
-const expectedUsers = readUserCSVFile(fileToParse);
+let expectedUsers = readUserCSVFile(fileToParse);
 
 const duplicateUsers = duplicates( expectedUsers, (a, b) => a.uid == b.uid);
 if(duplicateUsers.length > 0) {
@@ -276,9 +277,11 @@ if(duplicateUsers.length > 0) {
     process.exit(1);
 }
 
-console.log(`input: ${expectedUsers.length} users`);
-console.log(expectedUsers[0]);
+//console.log(`input: ${expectedUsers.length} users`);
+//console.log(expectedUsers[0]);
 
+console.log("overriding with hello club users");
+expectedUsers = await fetchHelloClubAndOverride(config.helloClubAPI, expectedUsers);
 
 Promise.all(doorsToProgram.map((door) => {
     console.log(`connecting to: ${door.user}:${door.pass}@${door.ip}`);
