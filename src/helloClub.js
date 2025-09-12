@@ -58,9 +58,12 @@ export const fetchHelloClub = async (apiKey) => {
  */
 export const helloClubOverride = (csvUsers, helloClubUsers) => {
     helloClubUsers.forEach((hcu) => {
+        if(!hcu.customFields || !hcu.customFields.fob || !hcu.customFields.fobpin) {
+            return;
+        }
         const found = csvUsers.some((cu) => { // some for early exit if match
-            if(cu.uid == hcu.customFields?.fob) {
-                console.log(`updating "${cu.cid}"->"${hcu.id}"; "${cu.name}"->"${hcu.firstName} ${hcu.lastName}"; "${cu.pincode}"->${hcu.customFields.fobpin}"`);
+            if(cu.uid == hcu.customFields.fob) {
+                console.log(`updating "${cu.uid}"="${hcu.customFields.fob}": "${cu.cid}"->"${hcu.id}"; "${cu.name}"->"${hcu.firstName} ${hcu.lastName}"; "${cu.pincode}"->${hcu.customFields.fobpin}"`);
                 cu.cid = hcu.id;
                 cu.name = `${hcu.firstName} ${hcu.lastName}`;
                 cu.pincode = hcu.customFields.fobpin;
@@ -71,7 +74,7 @@ export const helloClubOverride = (csvUsers, helloClubUsers) => {
         if(!found) {
             // not found, add
             csvUsers.push({
-                uid: hcu.customFields?.fob,
+                uid: hcu.customFields.fob,
                 cid: hcu.id,
                 name: `${hcu.firstName} ${hcu.lastName}`,
                 pincode: hcu.customFields.fobpin,

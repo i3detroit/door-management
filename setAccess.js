@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/node
 import WebSocket from "ws";
 import * as fs from "fs";
 import * as path from "path";
@@ -281,64 +281,64 @@ if(duplicateUsers.length > 0) {
 //console.log(expectedUsers[0]);
 
 console.log("overriding with hello club users");
-expectedUsers = await fetchHelloClubAndOverride(config.helloClubAPI, expectedUsers);
+fetchHelloClubAndOverride(config.helloClubAPI, expectedUsers).then(expectedUsers => {
+    Promise.all(doorsToProgram.map((door) => {
+        console.log(`connecting to: ${door.user}:${door.pass}@${door.ip}`);
+        return login(door.ip, door.user, door.pass)
+            .then((auth) => {
+                console.log(`${door.hostname} logged in`);
+                return connect(auth, door.ip)
+            }).then(async (ws) => {
+                door.ws = ws; //TODO: make connect just modify door or something so we can reconnect transparently
+                console.log(`${door.hostname} connected to websocket`);
+                await delay(1000);
 
-Promise.all(doorsToProgram.map((door) => {
-    console.log(`connecting to: ${door.user}:${door.pass}@${door.ip}`);
-    return login(door.ip, door.user, door.pass)
-        .then((auth) => {
-            console.log(`${door.hostname} logged in`);
-            return connect(auth, door.ip)
-        }).then(async (ws) => {
-            door.ws = ws; //TODO: make connect just modify door or something so we can reconnect transparently
-            console.log(`${door.hostname} connected to websocket`);
-            await delay(1000);
+                const getUsers = (fetchActualUsers, door) => {
+                    if(fetchActualUsers) {
+                        // read from door, not user file
+                        return getActualUsers(door.ws, door.hostname).then((actualUsers) => {
+                            // update cache with whatever we read from door
+                            writeUserCSVFile(door.userList, actualUsers);
+                            return actualUsers;
+                        });
+                    } else {
+                        // TODO: readUserCSVFile needs to de duplicate
+                        return readUserCSVFile(door.userList);
+                    }
+                }
 
-            const getUsers = (fetchActualUsers, door) => {
-                if(fetchActualUsers) {
-                    // read from door, not user file
-                    return getActualUsers(door.ws, door.hostname).then((actualUsers) => {
-                        // update cache with whatever we read from door
-                        writeUserCSVFile(door.userList, actualUsers);
-                        return actualUsers;
-                    });
+                // TODO input flag to ask door vs cache
+                const fetchActualUsers = true;
+                const actualUsers = await getUsers(fetchActualUsers, door);
+
+                const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
+                const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
+                console.log(`${door.hostname} users to remove: ${badUsers.length}`);
+                console.log(`${door.hostname} users to add: ${missingUsers.length}`);
+                console.log("bad users");
+                console.log(badUsers[0]);
+                console.log("missing users");
+                console.log(missingUsers[0]);
+
+                if(badUsers.length == 0 && missingUsers.length == 0) {
+                    console.log(`${door.hostname} nothing to do =D`);
                 } else {
-                    // TODO: readUserCSVFile needs to de duplicate
-                    return readUserCSVFile(door.userList);
+                    if(badUsers.length > 0) {
+                        await delay(1000);
+                        console.log(`${door.hostname} deleting ${badUsers.length} users`);
+                        await deleteUsers(door, badUsers);
+                        console.log(`${door.hostname} done removing`);
+                    }
+                    if(missingUsers.length > 0) {
+                        await delay(1000);
+                        console.log(`${door.hostname} adding ${missingUsers.length} users`);
+                        await addUsers(door, missingUsers);
+                        console.log(`${door.hostname} done adding`);
+                    }
                 }
-            }
-
-            // TODO input flag to ask door vs cache
-            const fetchActualUsers = true;
-            const actualUsers = await getUsers(fetchActualUsers, door);
-
-            const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
-            const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
-            console.log(`${door.hostname} users to remove: ${badUsers.length}`);
-            console.log(`${door.hostname} users to add: ${missingUsers.length}`);
-            console.log("bad users");
-            console.log(badUsers[0]);
-            console.log("missing users");
-            console.log(missingUsers[0]);
-
-            if(badUsers.length == 0 && missingUsers.length == 0) {
-                console.log(`${door.hostname} nothing to do =D`);
-            } else {
-                if(badUsers.length > 0) {
-                    await delay(1000);
-                    console.log(`${door.hostname} deleting ${badUsers.length} users`);
-                    await deleteUsers(door, badUsers);
-                    console.log(`${door.hostname} done removing`);
-                }
-                if(missingUsers.length > 0) {
-                    await delay(1000);
-                    console.log(`${door.hostname} adding ${missingUsers.length} users`);
-                    await addUsers(door, missingUsers);
-                    console.log(`${door.hostname} done adding`);
-                }
-            }
-        });
-})).then((whatever) => {
-    console.log("all done");
-    process.exit(0);
+            });
+    })).then((whatever) => {
+        console.log("all done");
+        process.exit(0);
+    });
 });
