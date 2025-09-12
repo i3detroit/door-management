@@ -21,6 +21,16 @@ const userTypes = {
     Disabled: 0,
 };
 const doorUser2user = (u) => {
+    if(!u.hasOwnProperty("username") || !u.hasOwnProperty("uid") || !u.hasOwnProperty("pincode")) {
+        console.log("door user missing fields:");
+        console.log(u);
+        // door gives us bad data sometimes, so just basicaly mark the user bad if we have the uid
+        if(!u.hasOwnProperty("uid")) {
+            throw new Error("Door user missing fields");
+        }
+        u.username = "?";
+        u.pincode = "";
+    }
     const match = u.username.match(/([0-9a-f]+) (.*)/);
     const cid = match ? match[1] : "?";
     const name = match ? match[2] : "?";
@@ -31,10 +41,17 @@ const doorUser2user = (u) => {
         cid: cid,
     };
 };
-const user2doorUser = (user) => ({
-    "uid": user.uid,
-    "pincode": user.pincode,
-    "user": `${user.cid} ${user.name}`,
+const user2doorUser = (user) => {
+    if(!user.hasOwnProperty("uid") || !user.hasOwnProperty("cid") || !user.hasOwnProperty("pincode") || !user.hasOwnProperty("name")) {
+        console.log("user missing fields:");
+        console.log(u);
+        throw new Error("user missing fields");
+    }
+    return {
+        "uid": user.uid,
+        "pincode": user.pincode,
+        "user": `${user.cid} ${user.name}`,
+    };
 });
 
 const args = process.argv.slice(2);
