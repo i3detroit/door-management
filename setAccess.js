@@ -59,44 +59,6 @@ const user2doorUser = (user) => {
     };
 };
 
-const args = process.argv.slice(2);
-if((args.length != 1 && args.length != 2) || args[0] == "-h" || args[0] == "--help") {
-    console.log("usage: setAccess.js <access.csv> [door-name]");
-    console.log("   update doors configured in config.json with people in access.csv");
-    console.log("   door name just is some substring of door hostname, so like 'a' or 'b'");
-    console.log("   access.csv header: " + csvHeaders.join(', '));
-    process.exit(1);
-}
-let fileToParse = args[0];
-let doorName=args[1]
-
-try {
-    if (! fs.existsSync(fileToParse)) {
-        console.error(`no such file: "${fileToParse}"`);
-        process.exit(2);
-    }
-} catch(err) {
-    console.error(`error opening file: "${fileToParse}"`);
-    console.error(err)
-    process.exit(2);
-}
-
-let config = JSON.parse(fs.readFileSync(path.resolve(currentDir, 'config.json')));
-let logFile = path.resolve(currentDir, 'log');
-
-let doorsToProgram = config.doors;
-if(doorName) {
-    doorsToProgram = config.doors.filter((door) => door.hostname.includes(doorName))
-}
-if(doorsToProgram.length == 0) {
-    console.error(`door ${doorName} not found in config file`);
-}
-console.log("programming the following doors:")
-doorsToProgram.forEach((door) => {
-    console.log(`    ${door.hostname}`);
-    door.userList = path.resolve(currentDir, door.userList)
-});
-
 const hasSubArray = (master, sub) => {
     return sub.every(el => master.includes(el));
 }
@@ -289,6 +251,46 @@ const keypress = async () => {
         resolve()
     }))
 };
+
+
+// *********************** PROGRAM START *****************************
+const args = process.argv.slice(2);
+if((args.length != 1 && args.length != 2) || args[0] == "-h" || args[0] == "--help") {
+    console.log("usage: setAccess.js[door-name]");
+    console.log("   update doors configured in config.json with people in hello club");
+    console.log("   door name just is some substring of door hostname, so like 'a' or 'b'");
+    console.log("   access.csv header: " + csvHeaders.join(', '));
+    process.exit(1);
+}
+let fileToParse = path.resolve(currentDir, "access.csv");
+let doorName=args[0]
+
+try {
+    if (! fs.existsSync(fileToParse)) {
+        console.error(`no such file: "${fileToParse}"`);
+        process.exit(2);
+    }
+} catch(err) {
+    console.error(`error opening file: "${fileToParse}"`);
+    console.error(err)
+    process.exit(2);
+}
+
+let config = JSON.parse(fs.readFileSync(path.resolve(currentDir, 'config.json')));
+let logFile = path.resolve(currentDir, 'log');
+
+let doorsToProgram = config.doors;
+if(doorName) {
+    doorsToProgram = config.doors.filter((door) => door.hostname.includes(doorName))
+}
+if(doorsToProgram.length == 0) {
+    console.error(`door ${doorName} not found in config file, remmber DO NOT INCLUDE THE CSV ANYMORE it's all in hello club`);
+}
+console.log("programming the following doors:")
+doorsToProgram.forEach((door) => {
+    console.log(`    ${door.hostname}`);
+    door.userList = path.resolve(currentDir, door.userList)
+});
 
 let expectedUsers = readUserCSVFile(fileToParse);
 
