@@ -44,15 +44,20 @@ const doorUser2user = (u) => {
 const user2doorUser = (user) => {
     if(!user.hasOwnProperty("uid") || !user.hasOwnProperty("cid") || !user.hasOwnProperty("pincode") || !user.hasOwnProperty("name")) {
         console.log("user missing fields:");
-        console.log(u);
+        console.log(user);
         throw new Error("user missing fields");
+    }
+    if(isNaN(user.uid) || isNaN(user.pincode)) {
+        console.log("user has NaN fob data:");
+        console.log(user);
+        throw new Error("user bad fields");
     }
     return {
         "uid": user.uid,
         "pincode": user.pincode,
         "user": `${user.cid} ${user.name}`,
     };
-});
+};
 
 const args = process.argv.slice(2);
 if((args.length != 1 && args.length != 2) || args[0] == "-h" || args[0] == "--help") {
