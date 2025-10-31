@@ -255,7 +255,7 @@ const keypress = async () => {
 
 // *********************** PROGRAM START *****************************
 const args = process.argv.slice(2);
-if((args.length != 1 && args.length != 2) || args[0] == "-h" || args[0] == "--help") {
+if(args[0] == "-h" || args[0] == "--help") {
     console.log("usage: setAccess.js[door-name]");
     console.log("   update doors configured in config.json with people in hello club");
     console.log("   door name just is some substring of door hostname, so like 'a' or 'b'");
@@ -285,6 +285,7 @@ if(doorName) {
 }
 if(doorsToProgram.length == 0) {
     console.error(`door ${doorName} not found in config file, remmber DO NOT INCLUDE THE CSV ANYMORE it's all in hello club`);
+    process.exit(1);
 }
 console.log("programming the following doors:")
 doorsToProgram.forEach((door) => {
