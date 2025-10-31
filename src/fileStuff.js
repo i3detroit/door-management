@@ -55,7 +55,7 @@ export const logUser = (logFile, success, action, door, user) => {
     }
     fs.appendFile(
         logFile,
-        `${new Date().toISOString()} [${action}] success: ${success}, cid:"${
+        `${new Date().toISOString()} [${door.hostname} ${action}] success: ${success}, cid:"${
             user.cid
         }" name:"${user.name}", uid:"${user.uid}", pin:"${user.pincode}"\n`,
         (err) => {
