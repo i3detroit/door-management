@@ -36,6 +36,14 @@ export const fetchHelloClub = async (apiKey) => {
     } while(users.length < totalUsers);
 
 
+    const returnUsers = [];
+    for(const user of users) {
+        if( !/^[0-9]+$/.test(user.customFields.fob) ||  !/^[0-9]*$/.test(user.customFields.fobpin)) {
+            console.error(`hello club user ${user.firstName} ${user.lastName} has bad fob data: fob: '${user.customFields.fob}', pin: '${user.customFields.fobpin}'`);
+        } else {
+            returnUsers.push(user);
+        }
+    }
     // [{
     //     firstName
     //     lastName
@@ -45,7 +53,7 @@ export const fetchHelloClub = async (apiKey) => {
     //         "fobpin": "" | "0010" | false,
     //     }
     // }]
-    return users;
+    return returnUsers;
 };
 
 /*

@@ -47,12 +47,17 @@ const user2doorUser = (user) => {
         console.log(u);
         throw new Error("user missing fields");
     }
+    if(isNaN(user.cid) || isNaN(user.pincode) {
+        console.log("user has NaN fob data:");
+        console.log(u);
+        throw new Error("user bad fields");
+    }
     return {
         "uid": user.uid,
         "pincode": user.pincode,
         "user": `${user.cid} ${user.name}`,
     };
-});
+};
 
 const args = process.argv.slice(2);
 if((args.length != 1 && args.length != 2) || args[0] == "-h" || args[0] == "--help") {
