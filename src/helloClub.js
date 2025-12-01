@@ -5,7 +5,13 @@ import axios from 'axios';
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+export const fetchHelloClubAll = async (apiKey) => {
+    return _fetchHelloClub(apiKey, false);
+};
 export const fetchHelloClub = async (apiKey) => {
+    return _fetchHelloClub(apiKey, true);
+};
+const _fetchHelloClub = async (apiKey, onlyCurrentMembers) => {
     const base_url = "https://api-v2.helloclub.com/profiles"
     let users = [];
     let offset = 0
@@ -15,9 +21,12 @@ export const fetchHelloClub = async (apiKey) => {
     }
     let params = {
         'fields': 'firstName,lastName,customFields',
-        'withCurrentMembership': true,
         'offset': offset,
     };
+    if(onlyCurrentMembers) {
+        params['withCurrentMembership'] = true;
+    }
+
     let totalUsers = 0;
     do {
         // Make request
@@ -38,6 +47,13 @@ export const fetchHelloClub = async (apiKey) => {
 
     const returnUsers = [];
     for(const user of users) {
+        // treat undefined as empty string cause that's how it shows up in the UI
+        if(!user.customFields.fobpin) {
+            user.customFields.fobpin = "";
+        }
+        if(!user.customFields.fob) {
+            user.customFields.fob = "";
+        }
         if( !/^[0-9]+$/.test(user.customFields.fob) ||  !/^[0-9]*$/.test(user.customFields.fobpin)) {
             console.error(`hello club user ${user.firstName} ${user.lastName} has bad fob data: fob: '${user.customFields.fob}', pin: '${user.customFields.fobpin}'`);
         } else {
@@ -50,7 +66,7 @@ export const fetchHelloClub = async (apiKey) => {
     //     id
     //     "customFields": {
     //         "fob": "333" | false,
-    //         "fobpin": "" | "0010" | false,
+    //         "fobpin": "" | "0010",
     //     }
     // }]
     return returnUsers;
