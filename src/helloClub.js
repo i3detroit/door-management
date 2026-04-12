@@ -54,10 +54,17 @@ const _fetchHelloClub = async (apiKey, onlyCurrentMembers) => {
         if(!user.customFields.fob) {
             user.customFields.fob = "";
         }
-        if( !/^[0-9]+$/.test(user.customFields.fob) ||  !/^[0-9]*$/.test(user.customFields.fobpin)) {
-            console.error(`hello club user ${user.firstName} ${user.lastName} has bad fob data: fob: '${user.customFields.fob}', pin: '${user.customFields.fobpin}'`);
-        } else {
-            returnUsers.push(user);
+        let fobs = user.customFields.fob.split(",");
+        let fobPins = user.customFields.fobpin.split(",");
+
+        for (let i=0; i<fobs.length; i++) {
+            user.customFields.fob = fobs[i];
+            user.customFields.fobpin = fobPins[i];
+            if (/^[0-9]+$/.test(user.customFields.fob) && /^[0-9]*$/.test(user.customFields.fobpin)) {
+                returnUsers.push(user);
+            } else {
+                console.error(`hello club user ${user.firstName} ${user.lastName} has bad fob data: fob: '${user.customFields.fob}', pin: '${user.customFields.fobpin}'`);
+            }
         }
     }
     // [{
