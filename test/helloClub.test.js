@@ -60,6 +60,48 @@ test('processHelloClubUsers: empty strings for both', () => {
     expect(result.length).toBe(0);
 });
 
+test('processHelloClubUsers: multiple valid fobs should return distinct entries', () => {
+    const users = [makeUser("123,456", "1111,2222")];
+    const result = processHelloClubUsers(users);
+    expect(result.length).toBe(2);
+    expect(result[0].customFields.fob).toBe("123");
+    expect(result[0].customFields.fobpin).toBe("1111");
+    expect(result[1].customFields.fob).toBe("456");
+    expect(result[1].customFields.fobpin).toBe("2222");
+});
+
+test('processHelloClubUsers: spaces after comma in fobs should still be valid', () => {
+    const users = [makeUser("123, 456", "1111, 2222")];
+    const result = processHelloClubUsers(users);
+    expect(result.length).toBe(2);
+    expect(result[0].customFields.fob).toBe("123");
+    expect(result[1].customFields.fob).toBe("456");
+});
+
+test('processHelloClubUsers: leading zeros in fob', () => {
+    const users = [makeUser("007", "1234")];
+    const result = processHelloClubUsers(users);
+    // "007" passes regex but is probably not a valid fob
+    expect(result.length).toBe(1);
+    expect(result[0].customFields.fob).toBe("007");
+});
+
+test('processHelloClubUsers: fob of "0"', () => {
+    const users = [makeUser("0", "1234")];
+    const result = processHelloClubUsers(users);
+    // "0" passes regex but is probably not a valid fob
+    expect(result.length).toBe(1);
+    expect(result[0].customFields.fob).toBe("0");
+});
+
+test('processHelloClubUsers: numeric 0 fobpin gets treated as missing', () => {
+    const users = [{ firstName: 'Test', lastName: 'User', customFields: { fob: '123', fobpin: 0 }, id: 'test-id' }];
+    const result = processHelloClubUsers(users);
+    // numeric 0 is falsy, so it gets replaced with "" — same as missing
+    expect(result.length).toBe(1);
+    expect(result[0].customFields.fobpin).toBe("");
+});
+
 
 test('filter user basic', () => {
     const helloClubUsers =

@@ -67,16 +67,19 @@ export const processHelloClubUsers = (users) => {
         if(!user.customFields.fob) {
             user.customFields.fob = "";
         }
-        let fobs = user.customFields.fob.split(",");
-        let fobPins = user.customFields.fobpin.split(",");
+        let fobs = user.customFields.fob.split(",").map(s => s.trim());
+        let fobPins = user.customFields.fobpin.split(",").map(s => s.trim());
 
         for (let i=0; i<fobs.length; i++) {
-            user.customFields.fob = fobs[i];
-            user.customFields.fobpin = fobPins[i];
-            if (/^[0-9]+$/.test(user.customFields.fob) && /^[0-9]*$/.test(user.customFields.fobpin)) {
-                returnUsers.push(user);
+            const fob = fobs[i];
+            const fobpin = fobPins[i];
+            if (/^[0-9]+$/.test(fob) && /^[0-9]*$/.test(fobpin)) {
+                returnUsers.push({
+                    ...user,
+                    customFields: { ...user.customFields, fob, fobpin },
+                });
             } else {
-                console.error(`hello club user ${user.firstName} ${user.lastName} has bad fob data: fob: '${user.customFields.fob}', pin: '${user.customFields.fobpin}'`);
+                console.error(`hello club user ${user.firstName} ${user.lastName} has bad fob data: fob: '${fob}', pin: '${fobpin}'`);
             }
         }
     }
