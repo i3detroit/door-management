@@ -45,6 +45,19 @@ const _fetchHelloClub = async (apiKey, onlyCurrentMembers) => {
     } while(users.length < totalUsers);
 
 
+    // [{
+    //     firstName
+    //     lastName
+    //     id
+    //     "customFields": {
+    //         "fob": "333" | false,
+    //         "fobpin": "" | "0010",
+    //     }
+    // }]
+    return processHelloClubUsers(users);
+};
+
+export const processHelloClubUsers = (users) => {
     const returnUsers = [];
     for(const user of users) {
         // treat undefined as empty string cause that's how it shows up in the UI
@@ -67,15 +80,6 @@ const _fetchHelloClub = async (apiKey, onlyCurrentMembers) => {
             }
         }
     }
-    // [{
-    //     firstName
-    //     lastName
-    //     id
-    //     "customFields": {
-    //         "fob": "333" | false,
-    //         "fobpin": "" | "0010",
-    //     }
-    // }]
     return returnUsers;
 };
 
