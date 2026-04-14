@@ -61,25 +61,44 @@ export const processHelloClubUsers = (users) => {
     const returnUsers = [];
     for(const user of users) {
         // treat undefined as empty string cause that's how it shows up in the UI
+        if(!user.customFields) {
+            user.customFields = {};
+        }
         if(!user.customFields.fobpin) {
             user.customFields.fobpin = "";
         }
         if(!user.customFields.fob) {
             user.customFields.fob = "";
         }
+        // none is a magic string to clearly separate data entry issues and no pin
+        //
+        // fob/fobpin -> fob/pin
+        // foo,bar/a,b -> foo/a, foo/b
+        // foo,bar/a -> foo/a and print warning
+        // foo/none -> foo/
+        // foo/ -> print warning
+        // /bar -> print warning
         let fobs = user.customFields.fob.split(",").map(s => s.trim());
         let fobPins = user.customFields.fobpin.split(",").map(s => s.trim());
 
+        if(fobs.length != fobPins.length) {
+            console.warn(`hello club user ${user.firstName} ${user.lastName} has ${fobs.length} fobs but ${fobPins.length} pins`);
+        }
+
         for (let i=0; i<fobs.length; i++) {
             const fob = fobs[i];
-            const fobpin = fobPins[i];
-            if (/^[0-9]+$/.test(fob) && /^[0-9]*$/.test(fobpin)) {
+            let fobpin = fobPins[i];
+            console.log(`fob: ${fob}, fobpin: "${fobpin}"`);
+            if (/^[0-9]+$/.test(fob) && /^([0-9]+|none)$/.test(fobpin)) {
+                if(fobpin == "none") {
+                    fobpin = "";
+                }
                 returnUsers.push({
                     ...user,
-                    customFields: { ...user.customFields, fob, fobpin },
+                    customFields: { fob, fobpin },
                 });
             } else {
-                console.error(`hello club user ${user.firstName} ${user.lastName} has bad fob data: fob: '${fob}', pin: '${fobpin}'`);
+                console.warn(`hello club user ${user.firstName} ${user.lastName} has bad fob data: fob: '${fob}', pin: '${fobpin}'`);
             }
         }
     }

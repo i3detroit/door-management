@@ -1,5 +1,6 @@
 import { helloClubOverride, processHelloClubUsers } from "../src/helloClub.js";
 
+
 const makeUser = (fob, fobpin) => ({
     firstName: 'Test',
     lastName: 'User',
@@ -7,33 +8,73 @@ const makeUser = (fob, fobpin) => ({
     id: 'test-id'
 });
 
-test('processHelloClubUsers: multiple fobs, single pin', () => {
-    const users = [makeUser("foo,bar", "asdf")];
+// valid
+test('processHelloClubUsers: valid fobs with spaces', () => {
+    const users = [makeUser("123, 456 ", " 1111 , 2222")];
     const result = processHelloClubUsers(users);
-    expect(result.length).toBe(0);
+    expect(result.length).toBe(2);
+    expect(result[0].customFields.fob).toBe("123");
+    expect(result[0].customFields.fobpin).toBe("1111");
+    expect(result[1].customFields.fob).toBe("456");
+    expect(result[1].customFields.fobpin).toBe("2222");
+});
+
+test('processHelloClubUsers: leading zeros in fob', () => {
+    const users = [makeUser("007", "1234")];
+    const result = processHelloClubUsers(users);
+    expect(result.length).toBe(1);
+    expect(result[0].customFields.fob).toBe("007");
+});
+
+test('processHelloClubUsers: none pin', () => {
+    const users = [makeUser("111", "none")];
+    const result = processHelloClubUsers(users);
+    expect(result.length).toBe(1);
+    expect(result[0].customFields.fob).toBe("111");
+    expect(result[0].customFields.fobpin).toBe("");
+});
+
+test('processHelloClubUsers: none pin multi', () => {
+    const users = [makeUser("111,222", "42,none")];
+    const result = processHelloClubUsers(users);
+    expect(result.length).toBe(2);
+    expect(result[0].customFields.fob).toBe("111");
+    expect(result[0].customFields.fobpin).toBe("42");
+    expect(result[1].customFields.fob).toBe("222");
+    expect(result[1].customFields.fobpin).toBe("");
+});
+
+
+// fob/pin count mismatch
+test('processHelloClubUsers: multiple fobs, single pin', () => {
+    const users = [makeUser("111,222", "55")];
+    const result = processHelloClubUsers(users);
+    expect(result.length).toBe(1);
 });
 
 test('processHelloClubUsers: single fob, multiple pins', () => {
-    const users = [makeUser("foo", "bar,bat")];
+    const users = [makeUser("111", "222,55")];
     const result = processHelloClubUsers(users);
-    expect(result.length).toBe(0);
+    expect(result.length).toBe(1);
 });
 
 test('processHelloClubUsers: multiple fobs, pin is comma only', () => {
-    const users = [makeUser("foo,bar", ",")];
+    const users = [makeUser("111,222", ",")];
     const result = processHelloClubUsers(users);
     expect(result.length).toBe(0);
 });
 
 test('processHelloClubUsers: multiple fobs, pin has trailing comma', () => {
-    const users = [makeUser("foo,bar", "a,")];
+    const users = [makeUser("111,222", "66,")];
     const result = processHelloClubUsers(users);
-    expect(result.length).toBe(0);
+    expect(result.length).toBe(1);
 });
 
+// missing fields
 test('processHelloClubUsers: no customFields attribute', () => {
     const users = [{ firstName: 'Test', lastName: 'User', id: 'test-id' }];
-    expect(() => processHelloClubUsers(users)).toThrow();
+    const result = processHelloClubUsers(users);
+    expect(result.length).toBe(0);
 });
 
 test('processHelloClubUsers: missing fob', () => {
@@ -45,61 +86,13 @@ test('processHelloClubUsers: missing fob', () => {
 test('processHelloClubUsers: missing fobpin', () => {
     const users = [{ firstName: 'Test', lastName: 'User', customFields: { fob: '123456' }, id: 'test-id' }];
     const result = processHelloClubUsers(users);
-    expect(result.length).toBe(1);
+    expect(result.length).toBe(0);
 });
 
 test('processHelloClubUsers: missing both fob and fobpin', () => {
     const users = [{ firstName: 'Test', lastName: 'User', customFields: {}, id: 'test-id' }];
     const result = processHelloClubUsers(users);
     expect(result.length).toBe(0);
-});
-
-test('processHelloClubUsers: empty strings for both', () => {
-    const users = [makeUser("", "")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(0);
-});
-
-test('processHelloClubUsers: multiple valid fobs should return distinct entries', () => {
-    const users = [makeUser("123,456", "1111,2222")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(2);
-    expect(result[0].customFields.fob).toBe("123");
-    expect(result[0].customFields.fobpin).toBe("1111");
-    expect(result[1].customFields.fob).toBe("456");
-    expect(result[1].customFields.fobpin).toBe("2222");
-});
-
-test('processHelloClubUsers: spaces after comma in fobs should still be valid', () => {
-    const users = [makeUser("123, 456", "1111, 2222")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(2);
-    expect(result[0].customFields.fob).toBe("123");
-    expect(result[1].customFields.fob).toBe("456");
-});
-
-test('processHelloClubUsers: leading zeros in fob', () => {
-    const users = [makeUser("007", "1234")];
-    const result = processHelloClubUsers(users);
-    // "007" passes regex but is probably not a valid fob
-    expect(result.length).toBe(1);
-    expect(result[0].customFields.fob).toBe("007");
-});
-
-test('processHelloClubUsers: fob of "0"', () => {
-    const users = [makeUser("0", "1234")];
-    const result = processHelloClubUsers(users);
-    // "0" passes regex but is probably not a valid fob
-    expect(result.length).toBe(1);
-    expect(result[0].customFields.fob).toBe("0");
-});
-
-test('processHelloClubUsers: numeric 0 fobpin gets treated as missing', () => {
-    const users = [{ firstName: 'Test', lastName: 'User', customFields: { fob: '123', fobpin: 0 }, id: 'test-id' }];
-    const result = processHelloClubUsers(users);
-    // numeric 0 is falsy, so it gets replaced with "" — same as missing
-    expect(result.length).toBe(1);
-    expect(result[0].customFields.fobpin).toBe("");
 });
 
 
