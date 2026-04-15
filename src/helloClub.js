@@ -81,7 +81,7 @@ export const processHelloClubUsers = (users) => {
         let fobs = user.customFields.fob.split(",").map(s => s.trim());
         let fobPins = user.customFields.fobpin.split(",").map(s => s.trim());
 
-        if(fobs.length != fobPins.length) {
+        if(fobs.length !== fobPins.length) {
             console.warn(`hello club user ${user.firstName} ${user.lastName} has ${fobs.length} fobs but ${fobPins.length} pins`);
         }
 
@@ -90,7 +90,7 @@ export const processHelloClubUsers = (users) => {
             let fobpin = fobPins[i];
             console.log(`fob: ${fob}, fobpin: "${fobpin}"`);
             if (/^[0-9]+$/.test(fob) && /^([0-9]+|none)$/.test(fobpin)) {
-                if(fobpin == "none") {
+                if(fobpin === "none") {
                     fobpin = "";
                 }
                 returnUsers.push({
@@ -119,7 +119,7 @@ export const helloClubOverride = (csvUsers, helloClubUsers) => {
             return;
         }
         const found = csvUsers.some((cu) => { // some for early exit if match
-            if(cu.uid == hcu.customFields.fob) {
+            if(cu.uid === hcu.customFields.fob) {
                 console.log(`updating "${cu.uid}"="${hcu.customFields.fob}": "${cu.cid}"->"${hcu.id}"; "${cu.name}"->"${hcu.firstName} ${hcu.lastName}"; "${cu.pincode}"->${hcu.customFields.fobpin}"`);
                 cu.cid = hcu.id;
                 cu.name = `${hcu.firstName} ${hcu.lastName}`;
