@@ -88,7 +88,6 @@ export const processHelloClubUsers = (users) => {
         for (let i=0; i<fobs.length; i++) {
             const fob = fobs[i];
             let fobpin = fobPins[i];
-            console.log(`fob: ${fob}, fobpin: "${fobpin}"`);
             if (/^[0-9]+$/.test(fob) && /^([0-9]+|none)$/.test(fobpin)) {
                 if(fobpin === "none") {
                     fobpin = "";
