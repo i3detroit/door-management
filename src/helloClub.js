@@ -119,7 +119,7 @@ export const helloClubOverride = (csvUsers, helloClubUsers) => {
         }
         const found = csvUsers.some((cu) => { // some for early exit if match
             if(cu.uid === hcu.customFields.fob) {
-                console.log(`updating "${cu.uid}"="${hcu.customFields.fob}": "${cu.cid}"->"${hcu.id}"; "${cu.name}"->"${hcu.firstName} ${hcu.lastName}"; "${cu.pincode}"->${hcu.customFields.fobpin}"`);
+                console.log(`updating "${cu.uid}"="${hcu.customFields.fob}": "${cu.cid}"->"${hcu.id}"; "${cu.name}"->"${hcu.firstName} ${hcu.lastName}"; "${cu.pincode}"->"${hcu.customFields.fobpin}"`);
                 cu.cid = hcu.id;
                 cu.name = `${hcu.firstName} ${hcu.lastName}`;
                 cu.pincode = hcu.customFields.fobpin;
