@@ -82,12 +82,13 @@ const _fetchHelloClub = async (apiKey, onlyCurrentMembers) => {
  */
 export const helloClubOverride = (csvUsers, helloClubUsers) => {
     helloClubUsers.forEach((hcu) => {
-        if(!hcu.customFields || !hcu.customFields.fob || !hcu.customFields.fobpin) {
+        if(!hcu.customFields || !hcu.customFields.fob) {
+            console.log(`bad HC user: ${JSON.stringify(hcu)}`);
             return;
         }
         const found = csvUsers.some((cu) => { // some for early exit if match
-            if(cu.uid == hcu.customFields.fob) {
-                console.log(`updating "${cu.uid}"="${hcu.customFields.fob}": "${cu.cid}"->"${hcu.id}"; "${cu.name}"->"${hcu.firstName} ${hcu.lastName}"; "${cu.pincode}"->${hcu.customFields.fobpin}"`);
+            if(cu.uid === hcu.customFields.fob) {
+                console.log(`updating "${cu.uid}"="${hcu.customFields.fob}": "${cu.cid}"->"${hcu.id}"; "${cu.name}"->"${hcu.firstName} ${hcu.lastName}"; "${cu.pincode}"->"${hcu.customFields.fobpin}"`);
                 cu.cid = hcu.id;
                 cu.name = `${hcu.firstName} ${hcu.lastName}`;
                 cu.pincode = hcu.customFields.fobpin;

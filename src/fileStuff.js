@@ -5,8 +5,8 @@ import { stringify } from "csv-stringify/sync";
 
 export const isSameUser = (a, b) =>
     a.uid == b.uid
-    && a.cid == b.cid
-    && a.name == b.name
+    //&& a.cid == b.cid
+    && a.name.substring(0, 10) == b.name.substring(0, 10)
     && a.pincode == b.pincode;
 
 export const parseUserCSV = (dataStr) => {

@@ -31,18 +31,19 @@ const doorUser2user = (u) => {
         u.username = "?";
         u.pincode = "";
     }
-    const match = u.username.match(/([0-9a-f]+) (.*)/);
-    const cid = match ? match[1] : "?";
-    const name = match ? match[2] : "?";
+    //const match = u.username.match(/([0-9a-f]+) (.*)/);
+    //const cid = match ? match[1] : "?";
+    //const name = match ? match[2] : "?";
+    const name = u.username;
     return {
         uid: u.uid,
         pincode: u.pincode,
         name: name,
-        cid: cid,
+        // cid: cid,
     };
 };
 const user2doorUser = (user) => {
-    if(!user.hasOwnProperty("uid") || !user.hasOwnProperty("cid") || !user.hasOwnProperty("pincode") || !user.hasOwnProperty("name")) {
+    if(!user.hasOwnProperty("uid") || /*!user.hasOwnProperty("cid") ||*/ !user.hasOwnProperty("pincode") || !user.hasOwnProperty("name")) {
         console.log("user missing fields:");
         console.log(user);
         throw new Error("user missing fields");
@@ -55,7 +56,8 @@ const user2doorUser = (user) => {
     return {
         "uid": user.uid,
         "pincode": user.pincode,
-        "user": `${user.cid} ${user.name}`,
+        //"user": `${user.cid} ${user.name}`,
+        "user": `${user.name.substring(0, 10)}`, // yaaaaaay memory bugs in esp-rfid
     };
 };
 
@@ -112,6 +114,10 @@ const getActualUsers = (ws, hostname) => {
                 page++;
                 //console.log(data.list.map(u => doorUser2user(u)));
                 users = users.concat(data.list);
+                if(!data.haspages) {
+                    console.warn("got truncated page from door, no haspages");
+                    console.log(data);
+                }
                 console.log(`${hostname} parsed userlist page ${data.page} of ${data.haspages}`);
                 if(data.page < haspages) {
                     await delay(500);
@@ -340,9 +346,9 @@ fetchHelloClubAndOverride(config.helloClubAPI, expectedUsers).then(expectedUsers
                 const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
                 console.log(`${door.hostname} users to remove: ${badUsers.length}`);
                 console.log(`${door.hostname} users to add: ${missingUsers.length}`);
-                console.log("bad users");
+                console.log(`bad users ${badUsers.length}`);
                 console.log(badUsers[0]);
-                console.log("missing users");
+                console.log(`missing users ${missingUsers.length}`);
                 console.log(missingUsers[0]);
 
                 if(badUsers.length == 0 && missingUsers.length == 0) {
