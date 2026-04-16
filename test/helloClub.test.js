@@ -1,98 +1,156 @@
-import { helloClubOverride, processHelloClubUsers } from "../src/helloClub.js";
+import {jest} from "@jest/globals";
+import {helloClubOverride, processHelloClubUsers} from "../src/helloClub.js";
 
 
 const makeUser = (fob, fobpin) => ({
     firstName: 'Test',
     lastName: 'User',
-    customFields: { fob, fobpin },
+    customFields: {fob, fobpin},
     id: 'test-id'
 });
 
-// valid
-test('processHelloClubUsers: valid fobs with spaces', () => {
-    const users = [makeUser("123, 456 ", " 1111 , 2222")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(2);
-    expect(result[0].customFields.fob).toBe("123");
-    expect(result[0].customFields.fobpin).toBe("1111");
-    expect(result[1].customFields.fob).toBe("456");
-    expect(result[1].customFields.fobpin).toBe("2222");
-});
+// none is a magic string to clearly separate data entry issues and "no pin"
+//
+// fob/fobpin        -> fob/pin
+// "123,456"/"11,22" -> 123/11, 456/22
+// "123,456"/"11"    -> warning (mismatched count)
+// "123"/"none"      -> 123/""
+// "123"/""          -> warning (missing pin)
+// ""/"11"           -> warning (missing fob)
 
-test('processHelloClubUsers: leading zeros in fob', () => {
-    const users = [makeUser("007", "1234")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(1);
-    expect(result[0].customFields.fob).toBe("007");
-});
+const cases = [
+    // happy paths
+    {
+        name: "single fob and pin",
+        user: makeUser("123", "1111"),
+        output: [{fob: "123", fobpin: "1111"}],
+    },
+    {
+        name: "valid fobs with spaces",
+        user: makeUser("123, 456 ", " 1111 , 2222"),
+        output: [{fob: "123", fobpin: "1111"}, {fob: "456", fobpin: "2222"}],
+    },
+    {
+        name: "leading zeros in fob",
+        user: makeUser("007", "1234"),
+        output: [{fob: "007", fobpin: "1234"}],
+    },
+    {
+        name: "none pin",
+        user: makeUser("111", "none"),
+        output: [{fob: "111", fobpin: ""}],
+    },
+    {
+        name: "none pin multi",
+        user: makeUser("111,222", "42,none"),
+        output: [{fob: "111", fobpin: "42"}, {fob: "222", fobpin: ""}],
+    },
+    {
+        name: "zero-prefixed pin",
+        user: makeUser("111", "0010"),
+        output: [{fob: "111", fobpin: "0010"}],
+    },
 
-test('processHelloClubUsers: none pin', () => {
-    const users = [makeUser("111", "none")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(1);
-    expect(result[0].customFields.fob).toBe("111");
-    expect(result[0].customFields.fobpin).toBe("");
-});
+    // mismatched fob/pin counts -> warning, partial output
+    {
+        name: "two fobs, one pin",
+        user: makeUser("111,222", "55"),
+        output: [{fob: "111", fobpin: "55"}],
+        warning: /\bfobs?\b.*\bpins?\b|mismatched/i,
+    },
+    {
+        name: "one fob, two pins",
+        user: makeUser("111", "222,55"),
+        output: [{fob: "111", fobpin: "222"}],
+        warning: /\bfobs?\b.*\bpins?\b|mismatched/i,
+    },
+    {
+        name: "multi fob, trailing-comma pin",
+        user: makeUser("111,222", "66,"),
+        output: [{fob: "111", fobpin: "66"}],
+        warning: /bad fob data/i,
+    },
+    {
+        name: "multi fob, comma-only pin",
+        user: makeUser("111,222", ","),
+        output: [],
+        warning: /bad fob data/i,
+    },
 
-test('processHelloClubUsers: none pin multi', () => {
-    const users = [makeUser("111,222", "42,none")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(2);
-    expect(result[0].customFields.fob).toBe("111");
-    expect(result[0].customFields.fobpin).toBe("42");
-    expect(result[1].customFields.fob).toBe("222");
-    expect(result[1].customFields.fobpin).toBe("");
-});
+    // missing / bad values -> warning, empty output
+    {
+        name: "blanks",
+        user: makeUser("", ""),
+        output: [],
+        warning: /bad fob data/i,
+    },
+    {
+        name: "missing pin",
+        user: makeUser("123", ""),
+        output: [],
+        warning: /bad fob data/i,
+    },
+    {
+        name: "missing fob",
+        user: makeUser("", "42"),
+        output: [],
+        warning: /bad fob data/i,
+    },
 
+    // missing fields on the user object
+    {
+        name: "no customFields attribute",
+        user: {firstName: 'Test', lastName: 'User', id: 'test-id'},
+        output: [],
+        warning: /bad fob data/i,
+    },
+    {
+        name: "missing fob field",
+        user: {firstName: 'Test', lastName: 'User', id: 'test-id', customFields: {fobpin: '1234'}},
+        output: [],
+        warning: /bad fob data/i,
+    },
+    {
+        name: "missing fobpin field",
+        user: {firstName: 'Test', lastName: 'User', id: 'test-id', customFields: {fob: '123456'}},
+        output: [],
+        warning: /bad fob data/i,
+    },
+    {
+        name: "missing both fob and fobpin",
+        user: {firstName: 'Test', lastName: 'User', id: 'test-id', customFields: {}},
+        output: [],
+        warning: /bad fob data/i,
+    },
+];
 
-// fob/pin count mismatch
-test('processHelloClubUsers: multiple fobs, single pin', () => {
-    const users = [makeUser("111,222", "55")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(1);
-});
+describe('processHelloClubUsers', () => {
+    let warnSpy;
+    beforeEach(() => {
+        warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {
+        });
+    });
+    afterEach(() => {
+        warnSpy.mockRestore();
+    });
 
-test('processHelloClubUsers: single fob, multiple pins', () => {
-    const users = [makeUser("111", "222,55")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(1);
-});
-
-test('processHelloClubUsers: multiple fobs, pin is comma only', () => {
-    const users = [makeUser("111,222", ",")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(0);
-});
-
-test('processHelloClubUsers: multiple fobs, pin has trailing comma', () => {
-    const users = [makeUser("111,222", "66,")];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(1);
-});
-
-// missing fields
-test('processHelloClubUsers: no customFields attribute', () => {
-    const users = [{ firstName: 'Test', lastName: 'User', id: 'test-id' }];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(0);
-});
-
-test('processHelloClubUsers: missing fob', () => {
-    const users = [{ firstName: 'Test', lastName: 'User', customFields: { fobpin: '1234' }, id: 'test-id' }];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(0);
-});
-
-test('processHelloClubUsers: missing fobpin', () => {
-    const users = [{ firstName: 'Test', lastName: 'User', customFields: { fob: '123456' }, id: 'test-id' }];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(0);
-});
-
-test('processHelloClubUsers: missing both fob and fobpin', () => {
-    const users = [{ firstName: 'Test', lastName: 'User', customFields: {}, id: 'test-id' }];
-    const result = processHelloClubUsers(users);
-    expect(result.length).toBe(0);
+    cases.forEach(({name, user, output, warning}) => {
+        test(name, () => {
+            const result = processHelloClubUsers([user]);
+            expect(result).toHaveLength(output.length);
+            output.forEach((expected, i) => {
+                expect(result[i].customFields.fob).toBe(expected.fob);
+                expect(result[i].customFields.fobpin).toBe(expected.fobpin);
+            });
+            if (warning) {
+                expect(warnSpy).toHaveBeenCalled();
+                const messages = warnSpy.mock.calls.map(c => c.join(' '));
+                expect(messages.some(m => warning.test(m))).toBe(true);
+            } else {
+                expect(warnSpy).not.toHaveBeenCalled();
+            }
+        });
+    });
 });
 
 
@@ -101,14 +159,14 @@ test('filter user basic', () => {
         [{
             firstName: 'foo',
             lastName: 'bar',
-            customFields: { fob: '1426046', fobpin: '1111' },
+            customFields: {fob: '1426046', fobpin: '1111'},
             id: '68432db6f62bde87e6e0f5f8'
         }];
     const csvUsers = [{
-          uid: '1426046',
-          cid: '666',
-          name: 'foo bar',
-          pincode: '9999'
+        uid: '1426046',
+        cid: '666',
+        name: 'foo bar',
+        pincode: '9999'
     }];
 
     const finalUsers = helloClubOverride(csvUsers, helloClubUsers);
@@ -122,7 +180,7 @@ test('add user', () => {
         [{
             firstName: 'foo',
             lastName: 'bar',
-            customFields: { fob: '1426046', fobpin: '1111' },
+            customFields: {fob: '1426046', fobpin: '1111'},
             id: '68432db6f62bde87e6e0f5f8'
         }];
     const csvUsers = [];
