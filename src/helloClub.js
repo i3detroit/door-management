@@ -45,21 +45,6 @@ const _fetchHelloClub = async (apiKey, onlyCurrentMembers) => {
     } while(users.length < totalUsers);
 
 
-    const returnUsers = [];
-    for(const user of users) {
-        // treat undefined as empty string cause that's how it shows up in the UI
-        if(!user.customFields.fobpin) {
-            user.customFields.fobpin = "";
-        }
-        if(!user.customFields.fob) {
-            user.customFields.fob = "";
-        }
-        if( !/^[0-9]+$/.test(user.customFields.fob) ||  !/^[0-9]*$/.test(user.customFields.fobpin)) {
-            console.error(`hello club user ${user.firstName} ${user.lastName} has bad fob data: fob: '${user.customFields.fob}', pin: '${user.customFields.fobpin}'`);
-        } else {
-            returnUsers.push(user);
-        }
-    }
     // [{
     //     firstName
     //     lastName
@@ -69,6 +54,53 @@ const _fetchHelloClub = async (apiKey, onlyCurrentMembers) => {
     //         "fobpin": "" | "0010",
     //     }
     // }]
+    return processHelloClubUsers(users);
+};
+
+export const processHelloClubUsers = (users) => {
+    const returnUsers = [];
+    for(const user of users) {
+        // treat undefined as empty string cause that's how it shows up in the UI
+        if(!user.customFields) {
+            user.customFields = {};
+        }
+        if(!user.customFields.fobpin) {
+            user.customFields.fobpin = "";
+        }
+        if(!user.customFields.fob) {
+            user.customFields.fob = "";
+        }
+        // none is a magic string to clearly separate data entry issues and no pin
+        //
+        // fob/fobpin -> fob/pin
+        // foo,bar/a,b -> foo/a, foo/b
+        // foo,bar/a -> foo/a and print warning
+        // foo/none -> foo/
+        // foo/ -> print warning
+        // /bar -> print warning
+        let fobs = user.customFields.fob.split(",").map(s => s.trim());
+        let fobPins = user.customFields.fobpin.split(",").map(s => s.trim());
+
+        if(fobs.length !== fobPins.length) {
+            console.warn(`hello club user ${user.firstName} ${user.lastName} has ${fobs.length} fobs but ${fobPins.length} pins`);
+        }
+
+        for (let i=0; i<fobs.length; i++) {
+            const fob = fobs[i];
+            let fobpin = fobPins[i];
+            if (/^[0-9]+$/.test(fob) && /^([0-9]+|none)$/.test(fobpin)) {
+                if(fobpin === "none") {
+                    fobpin = "";
+                }
+                returnUsers.push({
+                    ...user,
+                    customFields: { fob, fobpin },
+                });
+            } else {
+                console.warn(`hello club user ${user.firstName} ${user.lastName} has bad fob data: fob: '${fob}', pin: '${fobpin}'`);
+            }
+        }
+    }
     return returnUsers;
 };
 
@@ -82,8 +114,7 @@ const _fetchHelloClub = async (apiKey, onlyCurrentMembers) => {
  */
 export const helloClubOverride = (csvUsers, helloClubUsers) => {
     helloClubUsers.forEach((hcu) => {
-        if(!hcu.customFields || !hcu.customFields.fob) {
-            console.log(`bad HC user: ${JSON.stringify(hcu)}`);
+        if(!hcu.customFields || !hcu.customFields.fob || !hcu.customFields.fobpin) {
             return;
         }
         const found = csvUsers.some((cu) => { // some for early exit if match

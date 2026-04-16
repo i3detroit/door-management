@@ -1,6 +1,6 @@
 {
   "name": "esp-rfid-sync",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "listUsers.js",
   "type": "module",
@@ -12,14 +12,12 @@
   "license": "ISC",
   "dependencies": {
     "@lukesthl/ts-axios-digest-auth": "^1.0.5",
-    "@mhoc/axios-digest-auth": "github:mhoc/axios-digest-auth",
     "axios": "^1.11.0",
     "csv": "^6.3.11",
     "csvtojson": "^2.0.10",
     "ws": "^8.7.0"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
-    "nodemon": "^2.0.16"
+    "jest": "^30.3.0"
   }
 }
