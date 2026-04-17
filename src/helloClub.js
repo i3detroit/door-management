@@ -114,7 +114,7 @@ export const processHelloClubUsers = (users) => {
  */
 export const helloClubOverride = (csvUsers, helloClubUsers) => {
     helloClubUsers.forEach((hcu) => {
-        if(!hcu.customFields || !hcu.customFields.fob || !hcu.customFields.fobpin) {
+        if(!hcu.customFields || !hcu.customFields.fob) {
             return;
         }
         const found = csvUsers.some((cu) => { // some for early exit if match
