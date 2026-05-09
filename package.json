@@ -1,15 +1,15 @@
 {
-  "name": "esp-rfid-sync",
-  "version": "1.0.1",
+  "name": "door-management",
+  "version": "1.0.0",
   "description": "",
-  "main": "listUsers.js",
+  "main": "./src/setAccess.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon",
+    "start": "node ./src/setAccess.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@lukesthl/ts-axios-digest-auth": "^1.0.5",
     "axios": "^1.11.0",

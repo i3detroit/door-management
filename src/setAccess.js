@@ -1,13 +1,11 @@
-#!/usr/bin/node
 import WebSocket from "ws";
 import * as fs from "fs";
 import * as path from "path";
-import { isSameUser, writeUserCSVFile, readUserCSVFile, logUser } from "./src/fileStuff.js";
-import { fetchHelloClubAndOverride } from "./src/helloClub.js";
+import { isSameUser, writeUserCSVFile, readUserCSVFile, logUser } from "../lib/fileStuff.js";
+import { fetchHelloClubAndOverride } from "../lib/helloClub.js";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { AxiosDigestAuth } from '@lukesthl/ts-axios-digest-auth';
-
 
 const currentFile = fileURLToPath(import.meta.url);
 const currentDir = dirname(currentFile);
@@ -268,7 +266,7 @@ if(args[0] == "-h" || args[0] == "--help") {
     console.log("   access.csv header: " + csvHeaders.join(', '));
     process.exit(1);
 }
-let fileToParse = path.resolve(currentDir, "access.csv");
+let fileToParse = path.resolve(currentDir, "../access.csv");
 let doorName=args[0]
 
 try {
@@ -282,7 +280,7 @@ try {
     process.exit(2);
 }
 
-let config = JSON.parse(fs.readFileSync(path.resolve(currentDir, 'config.json')));
+let config = JSON.parse(fs.readFileSync(path.resolve(currentDir, '../config.json')));
 let logFile = path.resolve(currentDir, 'log');
 
 let doorsToProgram = config.doors;
