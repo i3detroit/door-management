@@ -70,6 +70,7 @@ const login = (host, username, password) => {
         username: username,
         password: password,
     });
+
     return digestAuthClient.get(`http://${host}/login`)
     .then((response) => {
         if (response.status != 200) {
@@ -98,26 +99,26 @@ const getActualUsers = (ws, hostname) => {
         ws.on('message', async (message) => {
             let data;
             try {
-                data = JSON.parse(message)
-            } catch(e) {
+                data = JSON.parse(message);
+            } catch (e) {
                 ws.send(`{"command":"userlist", "page":${page}}`);
                 return;
             }
             //console.log(data);
-            if(data.command == 'userlist') {
+            if (data.command == 'userlist') {
                 // sometimes it doesn't return haspages and this makes us sad
-                if(data.haspages) {
+                if (data.haspages) {
                     haspages = data.haspages;
                 }
                 page++;
                 //console.log(data.list.map(u => doorUser2user(u)));
                 users = users.concat(data.list);
-                if(!data.haspages) {
+                if (!data.haspages) {
                     console.warn("got truncated page from door, no haspages");
                     console.log(data);
                 }
-                console.log(`${hostname} parsed userlist page ${data.page} of ${data.haspages}`);
-                if(data.page < haspages) {
+                console.log(`${hostname} - parsed userlist page ${data.page} of ${data.haspages}`);
+                if (data.page < haspages) {
                     await delay(500);
                     ws.send(`{"command":"userlist", "page":${page}}`);
                 } else {
@@ -153,15 +154,15 @@ const connect = (auth, ip) => {
 };
 
 const delUser = (ws, user) => {
-
     process.stdout.write(".");
     ws.send(JSON.stringify( {
         "command": "remove",
         "uid": user.uid
     }));
 };
+
 const deleteUsers = (door, badUsers) => {
-    if(badUsers.length == 0) {
+    if (badUsers.length == 0) {
         return Promise.resolve();
     }
     return new Promise((resolve, reject) => {
@@ -170,14 +171,14 @@ const deleteUsers = (door, badUsers) => {
         door.ws.on('message', async (message) => {
             let data = JSON.parse(message)
             //console.log(data);
-            if(data.command == 'result' && data.resultof == 'remove') {
-                if(data.result != true) {
+            if (data.command == 'result' && data.resultof == 'remove') {
+                if (data.result != true) {
                     logUser(logFile, false, 'del', door, badUser);
                     console.error("failed to remove user, dying");
                     process.exit(5);
                 }
                 logUser(logFile, true, 'del', door, badUser);
-                if(badUsers.length > 0) {
+                if (badUsers.length > 0) {
                     badUser = badUsers.pop();
                     await delay(500);
                     delUser(door.ws, badUser);
@@ -207,7 +208,7 @@ const sendUser = (ws, user) => {
 };
 
 const addUsers = (door, users) => {
-    if(users.length == 0) {
+    if (users.length == 0) {
         return Promise.resolve();
     }
     return new Promise((resolve, reject) => {
@@ -216,14 +217,14 @@ const addUsers = (door, users) => {
         door.ws.on('message', async (message) => {
             let data = JSON.parse(message)
             //console.log(data);
-            if(data.command == 'result' && data.resultof == 'userfile') {
-                if(data.result != true) {
+            if (data.command == 'result' && data.resultof == 'userfile') {
+                if (data.result != true) {
                     logUser(logFile, false, 'add', door, user);
                     console.error("failed to add user, dying");
                     process.exit(5);
                 }
                 logUser(logFile, true, 'add', door, user);
-                if(users.length > 0) {
+                if (users.length > 0) {
                     user = users.pop();
                     await delay(500);
                     sendUser(door.ws, user);
@@ -284,10 +285,10 @@ let config = JSON.parse(fs.readFileSync(path.resolve(currentDir, '../config.json
 let logFile = path.resolve(currentDir, 'log');
 
 let doorsToProgram = config.doors;
-if(doorName) {
+if (doorName) {
     doorsToProgram = config.doors.filter((door) => door.hostname.includes(doorName))
 }
-if(doorsToProgram.length == 0) {
+if (doorsToProgram.length == 0) {
     console.error(`door ${doorName} not found in config file, remmber DO NOT INCLUDE THE CSV ANYMORE it's all in hello club`);
     process.exit(1);
 }
@@ -300,7 +301,7 @@ doorsToProgram.forEach((door) => {
 let expectedUsers = readUserCSVFile(fileToParse);
 
 const duplicateUsers = duplicates( expectedUsers, (a, b) => a.uid == b.uid);
-if(duplicateUsers.length > 0) {
+if (duplicateUsers.length > 0) {
     console.log("duplicate UIDs, fix your access csv!");
     console.log(duplicateUsers.map(du => expectedUsers.filter(u => u.uid == du.uid).map(u => `${u.name} -> ${u.uid}`)).flat().join("\n"));
     process.exit(1);
