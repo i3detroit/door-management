@@ -63,7 +63,7 @@ reboot () {
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $token" \
         -d "{\"entity_id\":\"script.${door}_side_keypad_power_cycle\"}" \
-        http://10.13.0.22/api/services/script/turn_on
+        http://ha.i3.lc/api/services/script/turn_on
     echo
 }
 
