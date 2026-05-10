@@ -310,7 +310,7 @@ await Promise.all(doorsToProgram.map(async (door) => {
     await delay(1000);
 
     const getUsers = async (fetchActualUsers, door) => {
-        if (fetchActualUsers) {
+        if (fetchActualUsers !== 'false') {
             // read from door, not user file
             const actualUsers = await getActualUsers(door.ws, door.hostname);
             // update cache with whatever we read from door
@@ -322,10 +322,7 @@ await Promise.all(doorsToProgram.map(async (door) => {
         }
     };
 
-    // TODO: input flag to ask door vs cache
-    const fetchActualUsers = true;
-    const actualUsers = await getUsers(fetchActualUsers, door);
-
+    const actualUsers = await getUsers(process.env.FETCH_ACTUAL_USERS, door);
     const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
     const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
     console.log(`${door.hostname} - users to remove: ${badUsers.length}`);

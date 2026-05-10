@@ -5,4 +5,5 @@ services:
       - ./data:/data
     environment:
       DATA_DIR: "/data"
+      FETCH_ACTUAL_USERS: true
     restart: unless-stopped
