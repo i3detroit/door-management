@@ -300,7 +300,7 @@ export const setAccess = async () => {
     }
 
     await Promise.all(doorsToProgram.map(async (door) => {
-        console.log(`connecting to: ${door.user}:${door.pass}@${door.ip}`);
+        console.log(`connecting to: ${door.user}@${door.ip}`);
         const auth = await login(door.ip, door.user, door.pass);
         console.log(`${door.hostname} - logged in`);
         
