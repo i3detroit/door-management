@@ -2,6 +2,8 @@
     "helloClubAPI": "hc_api_key",
     "mqtt": {
         "server": "host",
+        "username": "",
+        "password": "",
         "port": 1883
     },
     "doors": [

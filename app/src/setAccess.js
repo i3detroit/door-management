@@ -173,11 +173,11 @@ const deleteUsers = (door, badUsers) => {
             //console.log(data);
             if (data.command == 'result' && data.resultof == 'remove') {
                 if (data.result != true) {
-                    logUser(logFile, false, 'del', door, badUser);
+                    logUser(false, 'del', door, badUser);
                     console.error("failed to remove user, dying");
                     process.exit(5);
                 }
-                logUser(logFile, true, 'del', door, badUser);
+                logUser(true, 'del', door, badUser);
                 if (badUsers.length > 0) {
                     badUser = badUsers.pop();
                     await delay(500);
@@ -219,11 +219,11 @@ const addUsers = (door, users) => {
             //console.log(data);
             if (data.command == 'result' && data.resultof == 'userfile') {
                 if (data.result != true) {
-                    logUser(logFile, false, 'add', door, user);
+                    logUser(false, 'add', door, user);
                     console.error("failed to add user, dying");
                     process.exit(5);
                 }
-                logUser(logFile, true, 'add', door, user);
+                logUser(true, 'add', door, user);
                 if (users.length > 0) {
                     user = users.pop();
                     await delay(500);
@@ -269,9 +269,7 @@ export const setAccess = async () => {
     }
 
     let doorName = args[0];
-
     let config = JSON.parse(fs.readFileSync(path.resolve(process.env.DATA_DIR, 'config.json')));
-    let logFile = path.resolve(process.env.DATA_DIR, 'changes.log');
 
     let doorsToProgram = config.doors;
     if (doorName) {
