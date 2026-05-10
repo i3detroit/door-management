@@ -154,7 +154,6 @@ const connect = (auth, ip) => {
 };
 
 const delUser = (ws, user) => {
-    process.stdout.write(".");
     ws.send(JSON.stringify( {
         "command": "remove",
         "uid": user.uid
@@ -193,7 +192,6 @@ const deleteUsers = (door, badUsers) => {
 };
 
 const sendUser = (ws, user) => {
-    process.stdout.write(".");
     let command = {
         "command": "userfile",
         "acctype": userTypes.Admin,
@@ -203,7 +201,6 @@ const sendUser = (ws, user) => {
         "validuntil": 4200000000, //year 2103, probably fine
         ...user2doorUser(user),
     };
-    //console.log(JSON.stringify(command));
     ws.send(JSON.stringify(command));
 };
 

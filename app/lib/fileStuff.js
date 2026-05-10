@@ -15,7 +15,7 @@ export const parseUserCSV = (dataStr) => {
         columns: true,
         relax_column_count: true,
     });
-    console.log(data);
+
     return data.map((user) => ({
         uid: parseInt(user["key (DEC)"]).toString(),
         cid: user.CID.trim(),
