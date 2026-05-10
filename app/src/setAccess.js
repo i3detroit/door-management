@@ -258,98 +258,103 @@ const keypress = async () => {
 };
 
 // *********************** PROGRAM START *****************************
-const args = process.argv.slice(2);
-if (args[0] == "-h" || args[0] == "--help") {
-    console.log("usage: setAccess.js[door-name]");
-    console.log("   update doors configured in config.json with people in hello club");
-    console.log("   door name just is some substring of door hostname, so like 'a' or 'b'");
-    console.log("   access.csv header: " + csvHeaders.join(', '));
-    process.exit(1);
-}
+export const setAccess = async () => {
+    const args = process.argv.slice(2);
+    if (args[0] == "-h" || args[0] == "--help") {
+        console.log("usage: setAccess.js[door-name]");
+        console.log("   update doors configured in config.json with people in hello club");
+        console.log("   door name just is some substring of door hostname, so like 'a' or 'b'");
+        console.log("   access.csv header: " + csvHeaders.join(', '));
+        process.exit(1);
+    }
 
-let doorName = args[0];
+    let doorName = args[0];
 
-let config = JSON.parse(fs.readFileSync(path.resolve(process.env.DATA_DIR, 'config.json')));
-let logFile = path.resolve(process.env.DATA_DIR, 'changes.log');
+    let config = JSON.parse(fs.readFileSync(path.resolve(process.env.DATA_DIR, 'config.json')));
+    let logFile = path.resolve(process.env.DATA_DIR, 'changes.log');
 
-let doorsToProgram = config.doors;
-if (doorName) {
-    doorsToProgram = config.doors.filter((door) => door.hostname.includes(doorName))
-}
-if (doorsToProgram.length == 0) {
-    console.error(`door ${doorName} not found in config file, remmber DO NOT INCLUDE THE CSV ANYMORE it's all in hello club`);
-    process.exit(1);
-}
-console.log("programming the following doors:")
-doorsToProgram.forEach((door) => {
-    console.log(`    ${door.hostname}`);
-    door.userList = path.resolve(process.env.DATA_DIR, door.userList);
-});
+    let doorsToProgram = config.doors;
+    if (doorName) {
+        doorsToProgram = config.doors.filter((door) => door.hostname.includes(doorName))
+    }
+    if (doorsToProgram.length == 0) {
+        console.error(`door ${doorName} not found in config file, remmber DO NOT INCLUDE THE CSV ANYMORE it's all in hello club`);
+        process.exit(1);
+    }
+    console.log("programming the following doors:")
+    doorsToProgram.forEach((door) => {
+        console.log(`    ${door.hostname}`);
+        door.userList = path.resolve(process.env.DATA_DIR, door.userList);
+    });
 
-console.log("overriding with hello club users");
-let expectedUsers = await fetchAndProcessHelloClub(config.helloClubAPI);
+    console.log("overriding with hello club users");
+    let expectedUsers = await fetchAndProcessHelloClub(config.helloClubAPI);
 
-const duplicateUsers = duplicates(expectedUsers, (a, b) => a.uid == b.uid);
-if (duplicateUsers.length) {
-    console.error("duplicate UIDs, fix your helloclub records!");
-    console.error(duplicateUsers.map(du => (
-        expectedUsers.filter(u => u.uid == du.uid)
-            .map(u => `${u.name} -> ${u.uid}`)
-    )).flat().join("\n"));
-}
+    const duplicateUsers = duplicates(expectedUsers, (a, b) => a.uid == b.uid);
+    if (duplicateUsers.length) {
+        console.error("duplicate UIDs, fix your helloclub records!");
+        console.error(duplicateUsers.map(du => (
+            expectedUsers.filter(u => u.uid == du.uid)
+                .map(u => `${u.name} -> ${u.uid}`)
+        )).flat().join("\n"));
+    }
 
-await Promise.all(doorsToProgram.map(async (door) => {
-    console.log(`connecting to: ${door.user}:${door.pass}@${door.ip}`);
-    const auth = await login(door.ip, door.user, door.pass);
-    console.log(`${door.hostname} - logged in`);
-    
-    const ws = await connect(auth, door.ip);
-    // TODO: make connect just modify door or something so we can reconnect transparently
-    door.ws = ws;
-    console.log(`${door.hostname} - connected to websocket`);
-    await delay(1000);
+    await Promise.all(doorsToProgram.map(async (door) => {
+        console.log(`connecting to: ${door.user}:${door.pass}@${door.ip}`);
+        const auth = await login(door.ip, door.user, door.pass);
+        console.log(`${door.hostname} - logged in`);
+        
+        const ws = await connect(auth, door.ip);
+        // TODO: make connect just modify door or something so we can reconnect transparently
+        door.ws = ws;
+        console.log(`${door.hostname} - connected to websocket`);
+        await delay(1000);
 
-    const getUsers = async (fetchActualUsers, door) => {
-        if (fetchActualUsers !== 'false') {
-            // read from door, not user file
-            const actualUsers = await getActualUsers(door.ws, door.hostname);
-            // update cache with whatever we read from door
-            writeUserCSVFile(door.userList, actualUsers);
-            return actualUsers;
-        } else {
-            // TODO: readUserCSVFile needs to de duplicate
-            return readUserCSVFile(door.userList);
+        const getUsers = async (fetchActualUsers, door) => {
+            if (fetchActualUsers !== 'false') {
+                // read from door, not user file
+                const actualUsers = await getActualUsers(door.ws, door.hostname);
+                // update cache with whatever we read from door
+                writeUserCSVFile(door.userList, actualUsers);
+                return actualUsers;
+            } else {
+                // TODO: readUserCSVFile needs to de duplicate
+                return readUserCSVFile(door.userList);
+            }
+        };
+
+        const actualUsers = await getUsers(process.env.FETCH_ACTUAL_USERS, door);
+        const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
+        const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
+        console.log(`${door.hostname} - users to remove: ${badUsers.length}`);
+        console.log(`${door.hostname} - users to add: ${missingUsers.length}`);
+        console.log(`bad users ${badUsers.length}`);
+        if (badUsers.length) { console.log(badUsers[0]); }
+        console.log(`missing users ${missingUsers.length}`);
+        if (missingUsers.length) { console.log(missingUsers[0]); }
+
+        if (!badUsers.length && !missingUsers.length) {
+            console.log(`${door.hostname} - nothing to do`);
+            return;
         }
-    };
+        
+        if (badUsers.length) {
+            await delay(1000);
+            console.log(`${door.hostname} - deleting ${badUsers.length} users`);
+            await deleteUsers(door, badUsers);
+            console.log(`${door.hostname} - done removing`);
+        }
 
-    const actualUsers = await getUsers(process.env.FETCH_ACTUAL_USERS, door);
-    const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
-    const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
-    console.log(`${door.hostname} - users to remove: ${badUsers.length}`);
-    console.log(`${door.hostname} - users to add: ${missingUsers.length}`);
-    console.log(`bad users ${badUsers.length}`);
-    if (badUsers.length) { console.log(badUsers[0]); }
-    console.log(`missing users ${missingUsers.length}`);
-    if (missingUsers.length) { console.log(missingUsers[0]); }
+        if (missingUsers.length) {
+            await delay(1000);
+            console.log(`${door.hostname} - adding ${missingUsers.length} users`);
+            await addUsers(door, missingUsers);
+            console.log(`${door.hostname} - done adding`);
+        }
+    }));
 
-    if (!badUsers.length && !missingUsers.length) {
-        console.log(`${door.hostname} - nothing to do`);
-        return;
-    }
-    
-    if (badUsers.length) {
-        await delay(1000);
-        console.log(`${door.hostname} - deleting ${badUsers.length} users`);
-        await deleteUsers(door, badUsers);
-        console.log(`${door.hostname} - done removing`);
-    }
+    console.log("all done");
+};
 
-    if (missingUsers.length) {
-        await delay(1000);
-        console.log(`${door.hostname} - adding ${missingUsers.length} users`);
-        await addUsers(door, missingUsers);
-        console.log(`${door.hostname} - done adding`);
-    }
-}));
-
-console.log("all done");
+console.log('starting up, setting access');
+await setAccess();
