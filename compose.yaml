@@ -1,0 +1,8 @@
+services:
+  door-management:
+    build: .
+    volumes:
+      - ./data:/data
+    environment:
+      DATA_DIR: "/data"
+    restart: unless-stopped

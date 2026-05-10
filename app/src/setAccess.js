@@ -269,8 +269,8 @@ if (args[0] == "-h" || args[0] == "--help") {
 
 let doorName = args[0];
 
-let config = JSON.parse(fs.readFileSync(path.resolve(currentDir, '../config.json')));
-let logFile = path.resolve(currentDir, 'log');
+let config = JSON.parse(fs.readFileSync(path.resolve(process.env.DATA_DIR, 'config.json')));
+let logFile = path.resolve(process.env.DATA_DIR, 'changes.log');
 
 let doorsToProgram = config.doors;
 if (doorName) {
@@ -283,7 +283,7 @@ if (doorsToProgram.length == 0) {
 console.log("programming the following doors:")
 doorsToProgram.forEach((door) => {
     console.log(`    ${door.hostname}`);
-    door.userList = path.resolve(currentDir, door.userList);
+    door.userList = path.resolve(process.env.DATA_DIR, door.userList);
 });
 
 console.log("overriding with hello club users");

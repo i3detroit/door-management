@@ -1,6 +1,6 @@
-# User lists
-*.csv
-!access.csv.example
+# Cached CSVs and config
+data/*
+!data/config.json.example
 
 # Logs
 logs
@@ -11,7 +11,6 @@ npm-debug.log*
 node_modules/
 
 # dotenv environment variable files
-/config.json
 .env
 .env.*
 !.env.example

@@ -4,7 +4,7 @@ Management scripts for a fleet of esp-rfid doors
 
 ## Initialization
 
-Use `npm install` to install the required modules
+Use `docker compose up` to run the container
 
 ## Run the files in `test/`
 
