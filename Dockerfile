@@ -5,24 +5,24 @@ FROM node:lts AS builder
 WORKDIR /app
 
 # Copy package files
-COPY ./app/package*.json ./
+COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # Copy source code
-COPY ./app .
+COPY *.config.js .
+COPY /src ./src
+COPY /static ./static
+
+# Build front-end app
+RUN npm run build
 
 # Production stage
 FROM node:lts AS production
 
 # Create app directory
 WORKDIR /app
-
-# Create non-root user
-# RUN groupadd --gid 1001 nodejs && \
-#     useradd --uid 1001 --gid nodejs nodejs && \
-#     chown -R nodejs:nodejs /app
 
 # Copy built application from builder stage
 COPY --from=builder --chown=node:node /app /app

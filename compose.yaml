@@ -2,9 +2,10 @@ services:
   door-management:
     build: .
     user: "1000:1000"
+    ports:
+      - "4173:4173"
     volumes:
       - ./data:/data
     environment:
-      DATA_DIR: "/data"
       FETCH_ACTUAL_USERS: true
     restart: unless-stopped

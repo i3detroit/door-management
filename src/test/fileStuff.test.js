@@ -3,7 +3,7 @@ import {
     stringifyUserCSV,
     filterOutUser,
     parseUserCSV,
-} from "../lib/fileStuff.js";
+} from "$lib/helpers/fileStuff.js";
 
 test("filter user basic", () => {
     const user = {

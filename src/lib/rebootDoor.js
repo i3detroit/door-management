@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { config } from "../lib/fileStuff.js";
+import { config } from "$lib/helpers/fileStuff.js";
 
 export const rebootDoor = async (doorName) => {
     const door = config.doors.find((door) => door.name === doorName);

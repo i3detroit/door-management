@@ -1,5 +1,5 @@
-import { client } from "../lib/mqttLogging.js";
-import { config } from "../lib/fileStuff.js";
+import { client } from "$lib/helpers/mqttLogging.js";
+import { config } from "$lib/helpers/fileStuff.js";
 
 export const openDoor = async (doorName) => {
     const door = config.doors.find((door) => door.name === doorName);

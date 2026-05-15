@@ -3,9 +3,14 @@ import * as fs from "fs";
 import * as path from "path";
 import { parse } from "csv-parse/sync";
 import { stringify } from "csv-stringify/sync";
+import { env } from "$env/dynamic/private";
+import { building } from "$app/environment";
 
-export const config = JSON.parse(fs.readFileSync(
-    path.resolve(process.env.DATA_DIR, 'config.json')
+export const dataDir =
+    env.NODE_ENV == 'production' ? '/data' : './data';
+
+export const config = building || JSON.parse(fs.readFileSync(
+    path.resolve(dataDir, 'config.json')
 ));
 
 export const isSameUser = (a, b) =>
@@ -52,7 +57,7 @@ export const filterOutUser = (users, userToRemove) => {
 
 export const logFiles = Object.fromEntries(
     [ 'access', 'changes' ].map(fileName => (
-        [ fileName, path.resolve(process.env.DATA_DIR, `${fileName}.log`) ]
+        [ fileName, path.resolve(dataDir, `${fileName}.log`) ]
     ))
 );
 

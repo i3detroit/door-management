@@ -2,7 +2,7 @@ import { jest } from "@jest/globals";
 import {
     helloClubOverride,
     processHelloClubUsers
-} from "../lib/helloClub.js";
+} from "$lib/helpers/helloClub.js";
 
 const makeUser = (fob, fobpin) => ({
     firstName: 'Test',

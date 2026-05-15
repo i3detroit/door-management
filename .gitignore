@@ -10,6 +10,14 @@ npm-debug.log*
 # Dependency directories
 node_modules/
 
+# Build output
+.output
+.vercel
+.netlify
+.wrangler
+.svelte-kit
+build/
+
 # dotenv environment variable files
 .env
 .env.*
@@ -17,3 +25,7 @@ node_modules/
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

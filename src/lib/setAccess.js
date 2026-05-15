@@ -1,10 +1,11 @@
 import WebSocket from "ws";
 import * as path from "path";
-import { config, isSameUser, writeUserCSVFile, readUserCSVFile, logUser } from "../lib/fileStuff.js";
-import { fetchAndProcessHelloClub } from "../lib/helloClub.js";
+import { dataDir, config, isSameUser, writeUserCSVFile, readUserCSVFile, logUser } from "$lib/helpers/fileStuff.js";
+import { fetchAndProcessHelloClub } from "$lib/helpers/helloClub.js";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { AxiosDigestAuth } from '@lukesthl/ts-axios-digest-auth';
+import { env } from "$env/dynamic/private";
 
 const currentFile = fileURLToPath(import.meta.url);
 const currentDir = dirname(currentFile);
@@ -266,7 +267,7 @@ export const setAccess = async (doorName) => {
     console.log("programming the following doors:")
     doorsToProgram.forEach((door) => {
         console.log(`    ${door.hostname}`);
-        door.userList = path.resolve(process.env.DATA_DIR, door.userList);
+        door.userList = path.resolve(dataDir, door.userList);
     });
 
     console.log("overriding with hello club users");
@@ -305,7 +306,7 @@ export const setAccess = async (doorName) => {
             }
         };
 
-        const actualUsers = await getUsers(process.env.FETCH_ACTUAL_USERS, door);
+        const actualUsers = await getUsers(env.FETCH_ACTUAL_USERS, door);
         const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
         const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
         console.log(`${door.hostname} - users to remove: ${badUsers.length}`);
