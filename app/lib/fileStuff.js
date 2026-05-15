@@ -4,6 +4,10 @@ import * as path from "path";
 import { parse } from "csv-parse/sync";
 import { stringify } from "csv-stringify/sync";
 
+export const config = JSON.parse(fs.readFileSync(
+    path.resolve(process.env.DATA_DIR, 'config.json')
+));
+
 export const isSameUser = (a, b) =>
     a.uid == b.uid
     //&& a.cid == b.cid

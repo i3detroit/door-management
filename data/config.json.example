@@ -1,5 +1,11 @@
 {
-    "helloClubAPI": "hc_api_key",
+    "helloClub": {
+        "apiKey": "hc_api_key"
+    },
+    "homeAssistant": {
+        "hostname": "https://example.com",
+        "apiKey": ""
+    },
     "mqtt": {
         "server": "host",
         "username": "",
@@ -8,8 +14,10 @@
     },
     "doors": [
         {
+            "name": "Nickname for UI",
             "hostname": "whatever name",
             "topic": "mqtt topic",
+            "script": "restart_a_side_keypad",
             "ip": "host",
             "user": "admin",
             "pass": "admin pass",

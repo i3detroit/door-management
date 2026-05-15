@@ -2,10 +2,10 @@
   "name": "door-management",
   "version": "1.0.0",
   "description": "",
-  "main": "./src/setAccess.js",
+  "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node ./src/nightlyAccess.js",
+    "start": "node ./index.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "author": "",

@@ -1,7 +1,6 @@
 import WebSocket from "ws";
-import * as fs from "fs";
 import * as path from "path";
-import { isSameUser, writeUserCSVFile, readUserCSVFile, logUser } from "../lib/fileStuff.js";
+import { config, isSameUser, writeUserCSVFile, readUserCSVFile, logUser } from "../lib/fileStuff.js";
 import { fetchAndProcessHelloClub } from "../lib/helloClub.js";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -255,22 +254,10 @@ const keypress = async () => {
 };
 
 // *********************** PROGRAM START *****************************
-export const setAccess = async () => {
-    const args = process.argv.slice(2);
-    if (args[0] == "-h" || args[0] == "--help") {
-        console.log("usage: setAccess.js[door-name]");
-        console.log("   update doors configured in config.json with people in hello club");
-        console.log("   door name just is some substring of door hostname, so like 'a' or 'b'");
-        console.log("   access.csv header: " + csvHeaders.join(', '));
-        process.exit(1);
-    }
-
-    let doorName = args[0];
-    let config = JSON.parse(fs.readFileSync(path.resolve(process.env.DATA_DIR, 'config.json')));
-
+export const setAccess = async (doorName) => {
     let doorsToProgram = config.doors;
     if (doorName) {
-        doorsToProgram = config.doors.filter((door) => door.hostname.includes(doorName))
+        doorsToProgram = config.doors.filter((door) => door.name === doorName)
     }
     if (doorsToProgram.length == 0) {
         console.error(`door ${doorName} not found in config file, remmber DO NOT INCLUDE THE CSV ANYMORE it's all in hello club`);
@@ -283,7 +270,7 @@ export const setAccess = async () => {
     });
 
     console.log("overriding with hello club users");
-    let expectedUsers = await fetchAndProcessHelloClub(config.helloClubAPI);
+    let expectedUsers = await fetchAndProcessHelloClub(config.helloClub.apiKey);
 
     const duplicateUsers = duplicates(expectedUsers, (a, b) => a.uid == b.uid);
     if (duplicateUsers.length) {
@@ -350,6 +337,3 @@ export const setAccess = async () => {
 
     console.log("all done");
 };
-
-console.log('starting up, setting access');
-await setAccess();
