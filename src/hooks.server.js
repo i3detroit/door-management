@@ -5,10 +5,15 @@ import {
     pruneLogByLines,
     pruneLogByDays
 } from "$lib/helpers/fileStuff.js";
+import { env } from "$env/dynamic/private";
 
 export const init = async () => {
-    console.log('starting up, setting access');
-    await setAccess();
+    if (env.NODE_ENV == 'production') {
+        console.log('starting up, setting access');
+        await setAccess();
+    } else {
+        console.log('skipping initial set access, dev mode detected');
+    }
 
     cron.schedule('0 0 * * *', async () => {
         console.log('updating again', new Date());
