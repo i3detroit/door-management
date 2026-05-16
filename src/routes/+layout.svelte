@@ -7,3 +7,9 @@
 </svelte:head>
 
 {@render children()}
+
+<style>
+	:root {
+		color-scheme: dark light;
+	}
+</style>
