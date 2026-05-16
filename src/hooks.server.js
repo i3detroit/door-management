@@ -1,25 +1,26 @@
-import cron from "node-cron";
-import { setAccess } from "$lib/setAccess.js";
-import {
-    logFiles,
-    pruneLogByLines,
-    pruneLogByDays
-} from "$lib/helpers/fileStuff.js";
-import { env } from "$env/dynamic/private";
+import { start } from "./index.js";
+import { auth } from "$lib/helpers/authServer.js";
+import { svelteKitHandler } from "better-auth/svelte-kit";
+import { redirect } from "@sveltejs/kit";
+import { building } from "$app/environment";
 
-export const init = async () => {
-    if (env.NODE_ENV == 'production') {
-        console.log('starting up, setting access');
-        await setAccess();
-    } else {
-        console.log('skipping initial set access, dev mode detected');
-    }
+export const init = start;
 
-    cron.schedule('0 0 * * *', async () => {
-        console.log('updating again', new Date());
-        await setAccess();
+export const handle = async ({ event, resolve }) => {
+	if (event.route.id?.includes("(protected)")) {
+		const session = await auth.api.getSession({
+			headers: event.request.headers,
+		});
 
-        pruneLogByDays(logFiles.access, 2 * 30);
-        pruneLogByLines(logFiles.changes, 150);
-    });
+		if (session) {
+			event.locals.session = session?.session;
+			event.locals.user = session?.user;
+
+			return svelteKitHandler({ event, resolve, auth, building });
+		} else {
+			redirect(307, "/login");
+		}
+	} else {
+		return svelteKitHandler({ event, resolve, auth, building });
+	}
 };

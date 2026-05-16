@@ -23,28 +23,38 @@
 </script>
 
 <h1>Door Management</h1>
-<span>{ running ? 'Running' : 'Ready' }</span>
-<button
-    onclick={remoteFnHandler(remoteSetAccess)}
-    disabled={running}
+<a
+    href="/logout"
+    data-sveltekit-preload-data="tap"
 >
-    Update All
-</button>
-<hr />
-<select bind:value={selectedDoor}>
+    Logout
+</a>
+
+<span>{ running ? 'Running' : 'Ready' }</span>
+
+<select bind:value={selectedDoor}>?
+    <option value="">
+        All Doors
+    </option>
     {#each data.doors as door}
         <option>{door}</option>
     {/each}
 </select>
 <button
+    onclick={remoteFnHandler(remoteSetAccess)}
+    disabled={running}
+>
+    Update
+</button>
+<button
     onclick={remoteFnHandler(remoteOpenDoor)}
     disabled={running}
 >
-    Open Door
+    Open
 </button>
 <button
     onclick={remoteFnHandler(remoteRebootDoor)}
     disabled={running}
 >
-    Reboot Door
+    Reboot
 </button>

@@ -5,6 +5,7 @@ import { openDoor } from "$lib/openDoor.js";
 import { rebootDoor } from "$lib/rebootDoor.js";
 
 export const remoteSetAccess = command(
+    v.string(),
     async () => await setAccess()
 );
 

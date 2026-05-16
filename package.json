@@ -17,6 +17,8 @@
     "@sveltejs/kit": "^2.60.1",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "axios": "^1.11.0",
+    "better-auth": "^1.6.11",
+    "better-sqlite3": "^12.10.0",
     "csv": "^6.3.11",
     "csvtojson": "^2.0.10",
     "mqtt": "^5.15.1",
