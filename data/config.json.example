@@ -23,5 +23,8 @@
             "pass": "admin pass",
             "userList": "whatever.csv"
         }
-    ]
+    ],
+    "auth": {
+        "secret": "openssl rand -base64 32"
+    }
 }

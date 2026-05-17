@@ -5,6 +5,7 @@ import {
     pruneLogByLines,
     pruneLogByDays
 } from "$lib/helpers/fileStuff.js";
+import { logMQTT } from "$lib/helpers/mqttLogging.js";
 import { env } from "$env/dynamic/private";
 
 export const start = async () => {
@@ -14,6 +15,8 @@ export const start = async () => {
     } else {
         console.log('skipping initial set access, dev mode detected');
     }
+
+    await logMQTT();
 
     cron.schedule('0 0 * * *', async () => {
         console.log('updating again', new Date());
