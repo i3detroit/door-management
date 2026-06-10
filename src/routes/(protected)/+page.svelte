@@ -1,9 +1,11 @@
 <script>
+    import { untrack } from 'svelte';
     import {
         remoteOpenDoor,
         remoteRebootDoor,
         remoteSetAccess
     } from "./actions.remote";
+    import { source } from 'sveltekit-sse';
 
     let { data } = $props();
     
@@ -20,6 +22,15 @@
             running = false;
         }
     };
+
+    const logStream = source('/api/logs').select('line').json();
+    let logHistory = $state([]);
+
+    $effect(() => {
+        if (!$logStream) { return; }
+        const line = `${ $logStream.timestamp }: ${ $logStream.body }\n`;
+        untrack(() => logHistory.unshift(line));
+    });
 </script>
 
 <h1>Door Management</h1>
@@ -60,3 +71,25 @@
 >
     Reboot
 </button>
+
+<h2>Logs</h2>
+<output>
+    {#each logHistory as logLine}
+        <div>{logLine}</div>
+    {/each}
+</output>
+
+<style>
+    output {
+        font-family: monospace, sans-serif;
+        color: light-dark(black, white);
+        background-color: light-dark(#fff, #2b2a33);
+        border: 1px solid light-dark(#c7c7ce, #5d5c68);
+        padding: 0.75em;
+        width: 100%;
+        height: 350px;
+        display: flex;
+        flex-direction: column-reverse;
+        overflow-y: scroll;
+    }
+</style>
