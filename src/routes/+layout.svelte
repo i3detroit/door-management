@@ -1,15 +1,21 @@
 <script>
+	import '../styles/reset.css';
+	import '../styles/style.css';
+
 	let { children } = $props();
 </script>
 
 <svelte:head>
-	<title>i3Detroit | Door Management</title>
+	<title>Door Management</title>
 </svelte:head>
 
-{@render children()}
+<div class="container">
+	{@render children()}
+</div>
 
 <style>
-	:root {
-		color-scheme: dark light;
+	.container {
+		max-width: 800px;
+		margin-inline: auto;
 	}
 </style>

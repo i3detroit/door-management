@@ -31,62 +31,80 @@
 
 <h2>Create User</h2>
 <form onsubmit={handleSubmitCreate}>
-    <label for="email">
-        Email
-    </label>
-    <input
-        id="email"
-        type="email"
-        name="email"
-        required
-    />
-    <label for="password">
-        Password
-    </label>
-    <input
-        id="password"
-        type="password"
-        name="password"
-        minlength="8"
-        required
-    />
-    <label for="name">
-        Name
-    </label>
-    <input
-        id="name"
-        type="text"
-        name="name"
-        required
-    />
-    <label for="admin">
-        Admin
-    </label>
-    <input
-        id="admin"
-        type="checkbox"
-        name="admin"
-    />
-    <button type="submit">
-        Create
-    </button>
+    <div class="input-row">
+        <label for="email">
+            Email
+        </label>
+        <input
+            id="email"
+            type="email"
+            name="email"
+            required
+        />
+    </div>
+    <div class="input-row">
+        <label for="password">
+            Password
+        </label>
+        <input
+            id="password"
+            type="password"
+            name="password"
+            minlength="8"
+            required
+        />
+    </div>
+    <div class="input-row">
+        <label for="name">
+            Name
+        </label>
+        <input
+            id="name"
+            type="text"
+            name="name"
+            required
+        />
+    </div>
+    <div class="input-row">
+        <label for="admin">
+            Admin
+        </label>
+        <input
+            id="admin"
+            type="checkbox"
+            name="admin"
+        />
+    </div>
+    <div class="input-row">
+        <button type="submit">
+            Create
+        </button>
+    </div>
 </form>
 
 <h2>Delete User</h2>
 <form onsubmit={handleSubmitDelete}>
-    <label for="userId">
-        User ID
-    </label>
-    <input
-        type="text"
-        name="userId"
-        id="userId"
-        required
-    />
-    <button type="submit">
-        Delete
-    </button>
+    <div class="input-row">
+        <label for="userId">
+            User ID
+        </label>
+        <input
+            type="text"
+            name="userId"
+            id="userId"
+            required
+        />
+    </div>
+    <div class="input-row">
+        <button type="submit">
+            Delete
+        </button>
+    </div>
 </form>
 
 <h2>Current Users</h2>
-<code>{ JSON.stringify(data) }</code>
+<ul>
+    {#each data.users as user}
+        <li><code>{ JSON.stringify(user) }</code></li>
+    {/each}
+</ul>

@@ -23,6 +23,9 @@
 </script>
 
 <h1>Door Management</h1>
+
+<h2>Status</h2>
+<span>{ running ? 'Running' : 'Ready' }</span>
 <a
     href="/logout"
     data-sveltekit-preload-data="tap"
@@ -30,8 +33,7 @@
     Logout
 </a>
 
-<span>{ running ? 'Running' : 'Ready' }</span>
-
+<h2>Actions</h2>
 <select bind:value={selectedDoor}>?
     <option value="">
         All Doors

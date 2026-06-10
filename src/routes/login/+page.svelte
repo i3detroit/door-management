@@ -16,26 +16,32 @@
 <h1>Login</h1>
 
 <form onsubmit={handleSubmit}>
-    <label for="email">
-        Email
-    </label>
-    <input
-        id="email"
-        type="email"
-        name="email"
-        required
-    />
-    <label for="password">
-        Password
-    </label>
-    <input
-        id="password"
-        type="password"
-        name="password"
-        minlength="8"
-        required
-    />
-    <button type="submit">
-        Login
-    </button>
+    <div class="input-row">
+        <label for="email">
+            Email
+        </label>
+        <input
+            id="email"
+            type="email"
+            name="email"
+            required
+        />
+    </div>
+    <div class="input-row">
+        <label for="password">
+            Password
+        </label>
+        <input
+            id="password"
+            type="password"
+            name="password"
+            minlength="8"
+            required
+        />
+    </div>
+    <div class="input-row">
+        <button type="submit">
+            Login
+        </button>
+    </div>
 </form>
