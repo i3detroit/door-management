@@ -12,17 +12,6 @@
     let running = $state(false);
     let selectedDoor = $state();
 
-    const remoteFnHandler = fn => async () => {
-        try {
-            running = true;
-            await fn(selectedDoor);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            running = false;
-        }
-    };
-
     const logStream = source('/api/logs').select('line').json();
     let logHistory = $state([]);
 
@@ -54,19 +43,19 @@
     {/each}
 </select>
 <button
-    onclick={remoteFnHandler(remoteSetAccess)}
+    onclick={() => remoteSetAccess(selectedDoor).run() }
     disabled={running}
 >
     Update
 </button>
 <button
-    onclick={remoteFnHandler(remoteOpenDoor)}
+    onclick={() => remoteOpenDoor(selectedDoor).run() }
     disabled={running}
 >
     Open
 </button>
 <button
-    onclick={remoteFnHandler(remoteRebootDoor)}
+    onclick={() => remoteRebootDoor(selectedDoor).run() }
     disabled={running}
 >
     Reboot

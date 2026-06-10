@@ -10,6 +10,9 @@ const config = {
 		adapter: adapter(),
 		experimental: {
 			remoteFunctions: true
+		},
+		csrf: {
+			trustedOrigins: ['https://doors.i3.lc']
 		}
 	},
 	compilerOptions: {
