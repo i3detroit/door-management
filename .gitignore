@@ -18,6 +18,10 @@ node_modules/
 .svelte-kit
 build/
 
+# OS
+.DS_Store
+Thumbs.db
+
 # dotenv environment variable files
 .env
 .env.*
