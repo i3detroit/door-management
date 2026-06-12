@@ -2,6 +2,7 @@
     import { authClient } from "$lib/helpers/authClient.js";
     import { goto } from "$app/navigation";
 
+    const { data } = $props();
     let form = $state({});
 
     const handleSubmit = async (event) => {
@@ -20,6 +21,34 @@
 </script>
 
 <h1>Account</h1>
+
+<h2>User Information</h2>
+<form>
+    <div class="input-row">
+        <label for="email">
+            Full Name
+        </label>
+        <input
+            id="name"
+            type="text"
+            name="name"
+            value={data.user.name}
+            disabled
+        />
+    </div>
+    <div class="input-row">
+        <label for="newPassword">
+            Email Address
+        </label>
+        <input
+            id="email"
+            type="email"
+            name="email"
+            value={data.user.email}
+            disabled
+        />
+    </div>
+</form>
 
 <h2>Change Password</h2>
 {#if form.error}
