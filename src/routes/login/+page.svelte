@@ -1,19 +1,27 @@
 <script>
     import { authClient } from "$lib/helpers/authClient.js";
 
+    let form = $state({});
+
     const handleSubmit = async (event) => {
         event.preventDefault();
 
         const { email, password } =
             Object.fromEntries(new FormData(event.target));
 
-        await authClient.signIn.email({
+        const { error } = await authClient.signIn.email({
             email, password, callbackURL: '/'
         });
+
+        if (error) { form.error = error; }
     };
 </script>
 
 <h1>Login</h1>
+
+{#if form.error}
+    <p>{form.error.message}</p>
+{/if}
 
 <form onsubmit={handleSubmit}>
     <div class="input-row">
