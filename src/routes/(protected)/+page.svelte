@@ -23,6 +23,11 @@
 
 <h1>Door Management</h1>
 
+{#if data.admin}
+    <a href="/admin">
+        Admin
+    </a>
+{/if}
 <a href="/account">
     Account Settings
 </a>
