@@ -9,7 +9,6 @@
 
     let { data } = $props();
     
-    let running = $state(false);
     let selectedDoor = $state();
 
     const logStream = source('/api/logs').select('line').json();
@@ -24,8 +23,9 @@
 
 <h1>Door Management</h1>
 
-<h2>Status</h2>
-<span>{ running ? 'Running' : 'Ready' }</span>
+<a href="/account">
+    Account Settings
+</a>
 <a
     href="/logout"
     data-sveltekit-preload-data="tap"
@@ -44,19 +44,16 @@
 </select>
 <button
     onclick={() => remoteSetAccess(selectedDoor).run() }
-    disabled={running}
 >
     Update
 </button>
 <button
     onclick={() => remoteOpenDoor(selectedDoor).run() }
-    disabled={running}
 >
     Open
 </button>
 <button
     onclick={() => remoteRebootDoor(selectedDoor).run() }
-    disabled={running}
 >
     Reboot
 </button>
