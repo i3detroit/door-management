@@ -64,6 +64,7 @@
             id="currentPassword"
             type="password"
             name="currentPassword"
+            autocomplete="current-password"
             required
         />
     </div>
@@ -75,6 +76,7 @@
             id="newPassword"
             type="password"
             name="newPassword"
+            autocomplete="new-password"
             minlength="8"
             required
         />
