@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { setAccess } from "$lib/setAccess.js";
+import { setAccessWithRetry } from "$lib/setAccess.js";
 import {
     logFiles,
     pruneLogByLines,
@@ -11,16 +11,20 @@ import { env } from "$env/dynamic/private";
 export const start = async () => {
     if (env.NODE_ENV == 'production') {
         console.log('starting up, setting access');
-        await setAccess();
+        setAccessWithRetry();
     } else {
         console.log('skipping initial set access, dev mode detected');
     }
 
-    await logMQTT();
+    logMQTT();
 
     cron.schedule('0 0 * * *', async () => {
         console.log('updating again', new Date());
-        await setAccess();
+        try {
+            await setAccessWithRetry();
+        } catch(e) {
+            console.error("failed to set access");
+        }
 
         pruneLogByDays(logFiles.access, 2 * 30);
         pruneLogByLines(logFiles.changes, 150);

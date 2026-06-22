@@ -8,7 +8,7 @@
     import { source } from 'sveltekit-sse';
 
     let { data } = $props();
-    
+
     let selectedDoor = $state();
 
     const logStream = source('/api/logs').select('line').json();

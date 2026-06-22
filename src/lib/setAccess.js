@@ -95,13 +95,23 @@ const getActualUsers = (ws, hostname) => {
     let page = 1;
     let haspages = 2;
     return new Promise((resolve, reject) => {
+
+        const StartTimeoutShit = () =>
+            setTimeout(() => {
+                console.error(`getActulUsers timed out at page ${page}`);
+                reject();
+            }, 10000);
+
+        let timeout = StartTimeoutShit();
         let users = [];
         ws.on('message', async (message) => {
+            clearTimeout(timeout);
             let data;
             try {
                 data = JSON.parse(message);
             } catch (e) {
                 ws.send(`{"command":"userlist", "page":${page}}`);
+                timeout = StartTimeoutShit();
                 return;
             }
             //console.log(data);
@@ -121,6 +131,7 @@ const getActualUsers = (ws, hostname) => {
                 if (data.page < haspages) {
                     await delay(500);
                     ws.send(`{"command":"userlist", "page":${page}}`);
+                    timeout = StartTimeoutShit();
                 } else {
                     resolve(users.map(u => doorUser2user(u)));
                 }
@@ -286,7 +297,7 @@ export const setAccess = async (doorName) => {
         console.log(`connecting to: ${door.user}@${door.ip}`);
         const auth = await login(door.ip, door.user, door.pass);
         console.log(`${door.hostname} - logged in`);
-        
+
         const ws = await connect(auth, door.ip);
         // TODO: make connect just modify door or something so we can reconnect transparently
         door.ws = ws;
@@ -320,7 +331,7 @@ export const setAccess = async (doorName) => {
             console.log(`${door.hostname} - nothing to do`);
             return;
         }
-        
+
         if (badUsers.length) {
             await delay(1000);
             console.log(`${door.hostname} - deleting ${badUsers.length} users`);
@@ -337,4 +348,15 @@ export const setAccess = async (doorName) => {
     }));
 
     console.log("all done");
+};
+
+export const setAccessWithRetry = async (doorName) => {
+    for (let attempt = 0; attempt < 4; ++attempt) {
+        try {
+            await setAccess(doorName);
+            break;
+        } catch(e) {
+            console.error(`setAccess failed for some reason, retry ${attempt}...`);
+        }
+    }
 };

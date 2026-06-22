@@ -1,12 +1,12 @@
 import * as v from "valibot";
 import { query } from "$app/server";
-import { setAccess } from "$lib/setAccess.js";
+import { setAccessWithRetry } from "$lib/setAccess.js";
 import { openDoor } from "$lib/openDoor.js";
 import { rebootDoor } from "$lib/rebootDoor.js";
 
 export const remoteSetAccess = query(
     v.string(),
-    async () => await setAccess()
+    async () => await setAccessWithRetry()
 );
 
 export const remoteOpenDoor = query(
