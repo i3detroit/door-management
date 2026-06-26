@@ -95,23 +95,23 @@ const getActualUsers = (ws, hostname) => {
     let page = 1;
     let haspages = 2;
     return new Promise((resolve, reject) => {
-
-        const StartTimeoutShit = () =>
-            setTimeout(() => {
+        const startTimeout = () => {
+            return setTimeout(() => {
                 console.error(`getActulUsers timed out at page ${page}`);
                 reject();
             }, 10000);
+        };
 
-        let timeout = StartTimeoutShit();
+        let timeout = startTimeout();
         let users = [];
         ws.on('message', async (message) => {
             clearTimeout(timeout);
             let data;
             try {
                 data = JSON.parse(message);
-            } catch (e) {
+            } catch (error) {
                 ws.send(`{"command":"userlist", "page":${page}}`);
-                timeout = StartTimeoutShit();
+                timeout = startTimeout();
                 return;
             }
             //console.log(data);
@@ -131,7 +131,7 @@ const getActualUsers = (ws, hostname) => {
                 if (data.page < haspages) {
                     await delay(500);
                     ws.send(`{"command":"userlist", "page":${page}}`);
-                    timeout = StartTimeoutShit();
+                    timeout = startTimeout();
                 } else {
                     resolve(users.map(u => doorUser2user(u)));
                 }
@@ -351,12 +351,12 @@ export const setAccess = async (doorName) => {
 };
 
 export const setAccessWithRetry = async (doorName) => {
-    for (let attempt = 0; attempt < 4; ++attempt) {
+    for (let attempt = 0; attempt <= 3; ++attempt) {
         try {
             await setAccess(doorName);
             break;
-        } catch(e) {
-            console.error(`setAccess failed for some reason, retry ${attempt}...`);
+        } catch (error) {
+            console.error(`setAccess failed for some reason, retry ${attempt}...`, error);
         }
     }
 };

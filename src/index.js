@@ -22,8 +22,8 @@ export const start = async () => {
         console.log('updating again', new Date());
         try {
             await setAccessWithRetry();
-        } catch(e) {
-            console.error("failed to set access");
+        } catch (error) {
+            console.error("failed to set access", error);
         }
 
         pruneLogByDays(logFiles.access, 2 * 30);

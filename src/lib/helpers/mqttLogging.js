@@ -26,6 +26,7 @@ export const logMQTT = async () => {
             json.date = new Date().toISOString();
             logSwipe(JSON.stringify(json));
         } catch (error) {
+            console.error(error);
         }
     });
 };
