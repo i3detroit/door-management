@@ -97,7 +97,7 @@ const getActualUsers = (ws, hostname) => {
     return new Promise((resolve, reject) => {
         const startTimeout = () => {
             return setTimeout(() => {
-                console.error(`getActulUsers timed out at page ${page}`);
+                console.error(`getActulUsers timed out for ${hostname} at page ${page}`);
                 reject();
             }, 10000);
         };
@@ -124,7 +124,7 @@ const getActualUsers = (ws, hostname) => {
                 //console.log(data.list.map(u => doorUser2user(u)));
                 users = users.concat(data.list);
                 if (!data.haspages) {
-                    console.warn("got truncated page from door, no haspages");
+                    console.warn(`got truncated page from ${hostname}, no haspages`);
                     console.log(data);
                 }
                 console.log(`${hostname} - parsed userlist page ${data.page} of ${data.haspages}`);
@@ -293,68 +293,84 @@ export const setAccess = async (doorName) => {
         )).flat().join("\n"));
     }
 
-    await Promise.all(doorsToProgram.map(async (door) => {
-        console.log(`connecting to: ${door.user}@${door.ip}`);
-        const auth = await login(door.ip, door.user, door.pass);
-        console.log(`${door.hostname} - logged in`);
+    const result = await Promise.allSettled(doorsToProgram.map(async (door) =>
+        new Promise(async (resolve, reject) => {
+            try {
+                console.log(`connecting to: ${door.user}@${door.hostname}`);
+                const auth = await login(door.hostname, door.user, door.pass);
+                console.log(`${door.hostname} - logged in`);
 
-        const ws = await connect(auth, door.ip);
-        // TODO: make connect just modify door or something so we can reconnect transparently
-        door.ws = ws;
-        console.log(`${door.hostname} - connected to websocket`);
-        await delay(1000);
+                const ws = await connect(auth, door.hostname);
+                // TODO: make connect just modify door or something so we can reconnect transparently
+                door.ws = ws;
+                console.log(`${door.hostname} - connected to websocket`);
+                await delay(1000);
 
-        const getUsers = async (fetchActualUsers, door) => {
-            if (fetchActualUsers !== 'false') {
-                // read from door, not user file
-                const actualUsers = await getActualUsers(door.ws, door.hostname);
-                // update cache with whatever we read from door
-                writeUserCSVFile(door.userList, actualUsers);
-                return actualUsers;
-            } else {
-                // TODO: readUserCSVFile needs to de duplicate
-                return readUserCSVFile(door.userList);
+                const getUsers = async (fetchActualUsers, door) => {
+                    if (fetchActualUsers !== 'false') {
+                        // read from door, not user file
+                        const actualUsers = await getActualUsers(door.ws, door.hostname);
+                        // update cache with whatever we read from door
+                        writeUserCSVFile(door.userList, actualUsers);
+                        return actualUsers;
+                    } else {
+                        // TODO: readUserCSVFile needs to de duplicate
+                        return readUserCSVFile(door.userList);
+                    }
+                };
+
+                const actualUsers = await getUsers(env.FETCH_ACTUAL_USERS, door);
+                const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
+                const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
+                console.log(`${door.hostname} - users to remove: ${badUsers.length}`);
+                console.log(`${door.hostname} - users to add: ${missingUsers.length}`);
+                console.log(`bad users ${badUsers.length}`);
+                if (badUsers.length) { console.log(badUsers[0]); }
+                console.log(`missing users ${missingUsers.length}`);
+                if (missingUsers.length) { console.log(missingUsers[0]); }
+
+                if (!badUsers.length && !missingUsers.length) {
+                    console.log(`${door.hostname} - nothing to do`);
+                    return;
+                }
+
+                if (badUsers.length) {
+                    await delay(1000);
+                    console.log(`${door.hostname} - deleting ${badUsers.length} users`);
+                    await deleteUsers(door, badUsers);
+                    console.log(`${door.hostname} - done removing`);
+                }
+
+                if (missingUsers.length) {
+                    await delay(1000);
+                    console.log(`${door.hostname} - adding ${missingUsers.length} users`);
+                    await addUsers(door, missingUsers);
+                    console.log(`${door.hostname} - done adding`);
+                }
+                resolve(true)
+            } catch (error) {
+                console.error(`setAccess failed for some reason: `, error);
+                reject(false)
             }
-        };
+        })
+    ));
 
-        const actualUsers = await getUsers(env.FETCH_ACTUAL_USERS, door);
-        const badUsers = onlyInLeft(actualUsers, expectedUsers, isSameUser);
-        const missingUsers = onlyInLeft(expectedUsers, actualUsers, isSameUser);
-        console.log(`${door.hostname} - users to remove: ${badUsers.length}`);
-        console.log(`${door.hostname} - users to add: ${missingUsers.length}`);
-        console.log(`bad users ${badUsers.length}`);
-        if (badUsers.length) { console.log(badUsers[0]); }
-        console.log(`missing users ${missingUsers.length}`);
-        if (missingUsers.length) { console.log(missingUsers[0]); }
-
-        if (!badUsers.length && !missingUsers.length) {
-            console.log(`${door.hostname} - nothing to do`);
-            return;
-        }
-
-        if (badUsers.length) {
-            await delay(1000);
-            console.log(`${door.hostname} - deleting ${badUsers.length} users`);
-            await deleteUsers(door, badUsers);
-            console.log(`${door.hostname} - done removing`);
-        }
-
-        if (missingUsers.length) {
-            await delay(1000);
-            console.log(`${door.hostname} - adding ${missingUsers.length} users`);
-            await addUsers(door, missingUsers);
-            console.log(`${door.hostname} - done adding`);
-        }
-    }));
-
-    console.log("all done");
+    result.forEach((result, i) => {
+        console.log(`door ${index}(${doorsToProgram[i].hostname}): ${result}`);
+    });
+    return result.every((i) => i);
 };
 
 export const setAccessWithRetry = async (doorName) => {
     for (let attempt = 0; attempt <= 3; ++attempt) {
         try {
-            await setAccess(doorName);
-            break;
+            const success = setAccess(doorName);
+            // TODO: only retry failed doors
+            if(success) {
+                break;
+            } else {
+                console.error(`setAccess failed for some reason, retry ${attempt}...`, error);
+            }
         } catch (error) {
             console.error(`setAccess failed for some reason, retry ${attempt}...`, error);
         }

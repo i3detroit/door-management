@@ -18,7 +18,6 @@
             "hostname": "whatever name",
             "topic": "mqtt topic",
             "script": "restart_a_side_keypad",
-            "ip": "host",
             "user": "admin",
             "pass": "admin pass",
             "userList": "whatever.csv"
