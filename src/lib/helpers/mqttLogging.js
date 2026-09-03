@@ -17,16 +17,17 @@ export const logMQTT = async () => {
 
     client.on("message", (topic, buffer) => {
         const message = buffer.toString();
+        let json = {};
         try {
-            const json = JSON.parse(message);
-            if (!json.access) { return; }
-
-            delete json.cmd;
-            delete json.time;
-            json.date = new Date().toISOString();
-            logSwipe(JSON.stringify(json));
-        } catch (error) {
-            console.error(error);
+            json = JSON.parse(message);
+        } catch(e) {
+            return;
         }
+        if (!json.access) { return; }
+
+        delete json.cmd;
+        delete json.time;
+        json.date = new Date().toISOString();
+        logSwipe(JSON.stringify(json));
     });
 };
